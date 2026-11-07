@@ -1,3 +1,5 @@
+![애피 날리기 스크린샷](screenshot.png)
+
 # 애피 날리기 — AppieRagdoll
 뭐네어쩌라고요제가AiSlop만든다는데막그렇게절뭐라할거에요?!?!?!?!
 
