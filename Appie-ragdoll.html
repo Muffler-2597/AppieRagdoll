@@ -279,7 +279,7 @@
             <button type="button" class="gola-btn gola-btn--sm gola-press" id="recGif">GIF 녹화</button>
             <button type="button" class="gola-btn gola-btn--sm gola-press" id="recMp4">MP4 녹화</button>
           </div>
-          <p class="menu-copy">캔버스만 저장합니다. 최대 15초.</p>
+          <p class="menu-copy">캔버스만 저장합니다. 최대 3분.</p>
         </section>
       </div>
       <div class="menu-hint">[R] 스폰 / [M] 효과음 / [Ctrl+Z·Y] 되돌리기</div>
@@ -2859,7 +2859,7 @@ function main(THREE, CANNON){
     var sec = (performance.now() - recStart) / 1000;
     if(recTimeEl) recTimeEl.textContent = sec.toFixed(1) + 's';
     if(recFormat === 'gif') captureGifFrame();
-    if(sec >= 15) stopRecording();
+    if(sec >= 180) stopRecording();
   }
 
   function startRecording(format){
