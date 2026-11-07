@@ -1,0 +1,2929 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"}}</script>
+<title>애피 날리기 — GolaGola Ragdoll</title>
+<link rel="stylesheet" href="./gola/gola.css" onerror="var l=document.createElement('link');l.rel='stylesheet';l.href='https://cdn.jsdelivr.net/gh/Muffler-2597/GolaCSS@v1.0.0/gola.css';document.head.appendChild(l);">
+<style>
+  html,body{height:100%;overflow:hidden;background:#FFF}
+  #c{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:grab;background:#FFF}
+  .brand{position:fixed;left:clamp(14px,3.2vw,48px);top:clamp(14px,3vw,36px);z-index:10;pointer-events:none;max-width:min(72vw,900px)}
+  .brand-title-dom{display:none;color:#000;font-size:clamp(42px,7.8vw,96px);line-height:.9;white-space:nowrap}
+  .no-sdf .brand-title-dom{display:block}
+  .no-sdf .brand-title-sdf{display:none}
+  .brand-title-sdf{display:block;width:auto;height:auto;max-width:100%;margin:0}
+  .stats{position:fixed;right:clamp(14px,3.2vw,48px);top:clamp(14px,3vw,36px);z-index:10;display:flex;align-items:center;justify-content:flex-end;gap:clamp(10px,1.6vw,24px);flex-wrap:wrap;background:rgba(0,0,0,.749);color:#FFF;padding:10px 14px;font-size:clamp(12px,1.4vw,20px);line-height:1;max-width:min(58vw,760px);pointer-events:none}
+  .stats b{color:#FFD700;font-weight:400}
+  .dock{position:fixed;left:0;right:0;bottom:0;z-index:12;background:#787878;border-top:7px solid #000;padding:12px clamp(12px,2.6vw,30px) calc(12px + env(safe-area-inset-bottom));display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;row-gap:10px}
+  .dock-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .dock .gola-btn{width:auto;min-width:100px;height:46px;font-size:20px;border-width:5px;padding:0 12px}
+  .dock #fling{min-width:130px;height:50px;font-size:24px;border-width:7px}
+  .dock-hint{color:#FFF;font-size:clamp(12px,1.25vw,17px);line-height:1.35;text-align:right;opacity:.72;margin-left:auto;max-width:440px}
+  .loading{position:fixed;inset:0;z-index:100;background:#000;color:#FFF;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:24px;text-align:center;transition:opacity .22s linear,visibility .22s}
+  .loading.hidden{opacity:0;visibility:hidden;pointer-events:none}
+  .loading-title{color:#FFF;font-size:clamp(54px,11vw,128px);line-height:.9;transform:skewX(-19.29deg)}
+  .loading-bar{width:min(520px,80vw);height:15px;background:#1E1E1E;margin-top:8px}
+  .loading-bar i{display:block;height:100%;width:3%;background:#FFF;transition:width .2s linear}
+  .loading-step{color:#FFF;font-size:clamp(11px,1.3vw,16px);line-height:1.3;opacity:.64;max-width:640px;overflow-wrap:anywhere}
+  .loading-note{color:#FFD700;font-size:clamp(10px,1.1vw,13px);line-height:1.3;opacity:.86}
+  .err{position:fixed;inset:0;z-index:110;background:#000;color:#FFF;display:none;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:24px;text-align:center}
+  .err.open{display:flex}
+  .err-title{color:#FF8000;font-size:clamp(44px,9vw,100px);line-height:.95;transform:skewX(-19.29deg)}
+  .err-msg{color:#FFF;font-size:clamp(14px,1.7vw,22px);line-height:1.45;max-width:min(680px,90vw)}
+  .err-details{max-width:min(760px,90vw);color:#FFF;font-size:13px;line-height:1.4;opacity:.8;text-align:left}
+  .err-details summary{cursor:pointer;color:#FFD700;text-align:center;margin-bottom:8px}
+  .err-details pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px;line-height:1.5;user-select:text}
+  .menu-panel{z-index:60}
+  .menu-panel .gola-panel-title{font-size:clamp(70px,12vw,128px);height:clamp(150px,20vh,240px)}
+  .menu-panel .menu-close{position:fixed;top:20px;right:20px;z-index:3}
+  .menu-panel .gola-panel-main{padding:clamp(16px,3vw,36px)}
+  .menu-panel .gola-panel-subtitle{font-size:clamp(30px,4vw,50px);min-height:0;margin-bottom:clamp(14px,2vw,32px)}
+  .menu-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;max-width:1160px;margin:0 auto;width:100%;align-items:start}
+  .menu-card{background:#5A5A5A;border:7px solid #000;padding:clamp(14px,2vw,24px);min-width:0}
+  .menu-card .gola-sec-title{margin:4px 0 22px;font-size:clamp(22px,2.4vw,30px)}
+  .menu-card .gola-slider-row{justify-content:flex-start;gap:12px;margin-bottom:20px}
+  .menu-card .gola-slider-letter.vol{width:auto;font-size:clamp(24px,2.6vw,40px);color:#FFF}
+  .menu-card .gola-slider{width:auto;flex:1 1 140px;min-width:0}
+  .menu-card .gola-vol-val{width:auto;font-size:clamp(20px,2.2vw,30px)}
+  .toggle-row{display:flex;align-items:center;gap:14px;margin:13px 0;line-height:1}
+  .toggle-row .gola-label{font-size:clamp(17px,1.8vw,26px);line-height:1.05;flex:1;min-width:0}
+  .menu-copy{color:#FFF;font-size:clamp(13px,1.35vw,17px);line-height:1.55;opacity:.88;margin:14px 0 0}
+  .menu-hint{color:#FFF;font-size:clamp(11px,1.2vw,15px);text-align:center;margin-top:26px;opacity:.68}
+  #golaToasts{top:clamp(214px,24vh,244px)}
+  @media(max-width:1100px){
+    .dock .gola-btn{min-width:90px;font-size:18px;padding:0 9px}
+    .dock #fling{min-width:112px;font-size:22px}
+  }
+  @media(max-width:900px){
+    .brand{max-width:60vw}
+    .stats{font-size:10px;padding:6px 8px;gap:6px;max-width:calc(100vw - 28px);top:58px;right:14px;justify-content:flex-end}
+    .menu-grid{grid-template-columns:1fr}
+    .menu-panel .gola-panel-title{height:160px;font-size:64px}
+    .menu-panel .gola-panel-subtitle{font-size:34px;margin-bottom:18px}
+    .menu-card{padding:12px}
+    .toggle-row{margin:12px 0;gap:10px}
+    .toggle-row .gola-label{font-size:16px}
+    .menu-panel .menu-close{width:48px;height:48px;font-size:38px;border-width:5px;top:12px;right:12px}
+    #golaToasts{top:124px}
+  }
+  @media(max-width:820px){
+    .dock{padding:10px 10px calc(10px + env(safe-area-inset-bottom));gap:10px}
+    .dock-actions{width:100%;justify-content:space-between;gap:6px;flex-wrap:nowrap}
+    .dock .gola-btn,.dock #fling{flex:1 1 0;min-width:0;height:42px;font-size:16px;border-width:5px;padding:0 3px}
+    .dock-hint{display:none}
+  }
+  @media(max-width:420px){
+    .stats{font-size:9px;gap:4px;padding:5px 6px;max-width:calc(100vw - 24px);top:56px}
+  }
+  @media(min-width:821px){
+    #golaToasts{top:auto;bottom:calc(92px + env(safe-area-inset-bottom))}
+  }
+  @media(max-width:820px){
+    #golaToasts{top:124px;bottom:auto}
+  }
+   .obj-actions{display:flex;gap:12px;flex-wrap:wrap;margin:4px 0 12px}
+   .obj-actions .gola-btn{width:auto;min-width:120px;height:44px;font-size:17px;border-width:5px}
+   .skin-status{display:flex;gap:12px;align-items:center;margin:4px 0 12px;min-width:0}
+   .skin-preview{width:64px;height:64px;flex:none;background:#FFF;border:5px solid #000;image-rendering:pixelated;image-rendering:crisp-edges}
+   .skin-name{color:#FFD700;font-size:clamp(15px,1.7vw,22px);line-height:1.3;overflow-wrap:anywhere;min-width:0}
+   .skin-row{display:flex;gap:10px;align-items:stretch;margin:4px 0 12px}
+   .skin-row .gola-input{flex:1 1 auto;width:auto;min-width:0;height:44px;font-size:20px;line-height:44px}
+   .skin-row .gola-input:disabled{opacity:.6}
+   .skin-row .gola-btn{flex:none;width:auto;min-width:100px;height:44px;font-size:17px;border-width:5px}
+  .editor{position:fixed;right:16px;bottom:100px;z-index:22;width:min(400px,calc(100vw - 32px));background:#505050;border:7px solid #000;padding:13px 15px;display:none}
+  .editor.open{display:block}
+  .editor.is-empty .editor-grid,.editor.is-empty .gizmo-modes,.editor.is-empty .editor-collide,.editor.is-empty .editor-actions{display:none}
+  .editor-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:2px}
+  .editor-head span{color:#FFF;font-size:24px;line-height:1}
+  .editor-head-actions{display:flex;gap:4px}
+  .editor-icon{width:auto;min-width:38px;height:32px;background:#FFF;border:4px solid #000;color:#000;font-size:12px;line-height:1;cursor:pointer;padding:0 5px;white-space:nowrap}
+  .editor-icon:disabled{opacity:.35;cursor:not-allowed}
+  .editor-close{width:34px;height:34px;background:#FFF;border:4px solid #000;color:#000;font-size:24px;line-height:1;cursor:pointer;padding:0}
+  .editor-sub{color:#FF8000;font-size:12px;line-height:1;margin:4px 0 10px}
+  .editor-grid{display:grid;grid-template-columns:48px 1fr 1fr 1fr;gap:6px 7px;align-items:center;margin:8px 0;border-top:1px solid rgba(255,255,255,.14);padding-top:10px}
+  .editor-grid label{color:#FFF;font-size:12px;text-align:right;line-height:1}
+  .editor-num{width:100%;height:34px;border:none;background:#FFF;color:#000;font-size:14px;text-align:center;padding:0 2px;outline:none;border-radius:0}
+  .editor-num:disabled{background:#BDBDBD;color:#777}
+  .editor-unit{color:#FFF;font-size:12px;text-align:center}
+  .gizmo-modes{display:flex;gap:5px;margin-top:12px;border-top:1px solid rgba(255,255,255,.14);padding-top:10px}
+  .gizmo-mode{flex:1;height:32px;background:#FFF;border:4px solid #000;color:#000;font-size:13px;cursor:pointer;padding:0}
+  .gizmo-mode.is-active{background:#FF8000;color:#000}
+  .gizmo-mode:disabled{opacity:.35;cursor:not-allowed}
+  .editor-collide{margin:9px 0 0;gap:10px}
+  .editor-collide .gola-label{font-size:14px}
+  .editor-actions{display:flex;gap:6px;margin-top:10px}
+  .editor-actions .gola-btn{flex:1;min-width:0;height:40px;font-size:15px;border-width:4px;margin:0}
+  .gola-btn:disabled{opacity:.35;cursor:not-allowed;pointer-events:none}
+  .editor-actions .gola-btn--apply{font-size:18px;border:none;height:40px}
+  @media(max-width:820px){
+    .editor{left:8px;right:8px;bottom:calc(82px + env(safe-area-inset-bottom));width:auto;padding:10px}
+    .editor-head span{font-size:20px}
+    .editor-grid{grid-template-columns:42px 1fr 1fr 1fr;gap:4px}
+    .editor-num{height:30px;font-size:12px}
+    .editor-grid label{font-size:11px}
+    .editor-sub{font-size:11px}
+    .editor-actions .gola-btn{height:36px;font-size:13px}
+     .obj-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+     .obj-actions .gola-btn{width:100%;min-width:0;height:42px;font-size:15px;border-width:5px}
+     .skin-row{gap:8px}
+     .skin-row .gola-input{height:42px;font-size:16px;line-height:42px}
+     .skin-row .gola-btn{min-width:84px;height:42px;font-size:15px}
+     .skin-preview{width:56px;height:56px}
+  }
+  .recorder{position:fixed;top:18px;left:50%;transform:translateX(-50%);z-index:40;display:none;align-items:center;gap:10px;background:rgba(0,0,0,.8);border:7px solid #000;color:#FFF;padding:8px 12px}
+  .recorder.open{display:flex}
+  .rec-dot{width:12px;height:12px;background:#FF0000;animation:recblink 1s steps(2,end) infinite}
+  #recTime{font-size:18px;line-height:1;min-width:52px}
+  .recorder .gola-btn{height:32px;min-width:76px;font-size:13px;border-width:4px;margin:0}
+  @keyframes recblink{50%{opacity:.15}}
+  @media(prefers-reduced-motion:reduce){
+    .loading{transition:none}
+  }
+</style>
+</head>
+<body class="gola-sdf-all">
+<canvas id="c" aria-label="애피 래그돌 스테이지"></canvas>
+
+<header class="brand">
+  <h1 class="brand-title-dom">애피 날리기</h1>
+  <canvas class="gola-sdfcv brand-title-sdf" data-text="애피 날리기" data-size="96" data-color="#000" data-base="./gola/assets/sdf/" aria-label="애피 날리기"></canvas>
+</header>
+
+<div class="stats" aria-live="polite">
+  <span>던짐 <b id="stFling">0</b></span>
+  <span>충돌 <b id="stImpact">0</b></span>
+  <span>최고 <b id="stHigh">0.0m</b></span>
+  <span>체공 <b id="stAir">0.0s</b></span>
+</div>
+
+<div class="dock" role="toolbar" aria-label="애피 조작">
+  <div class="dock-actions">
+    <button id="fling" class="gola-btn gola-press" type="button">날리기</button>
+    <button id="spin" class="gola-btn gola-btn--sm gola-press" type="button">스핀</button>
+    <button id="reset" class="gola-btn gola-btn--sm gola-press" type="button">스폰</button>
+    <button id="menuBtn" class="gola-btn gola-btn--sm gola-press" type="button">메뉴</button>
+  </div>
+  <div class="dock-hint">WASD : 이동 / 우클릭 : 시점 / TAB : 메뉴</div>
+</div>
+
+<div class="recorder" id="recorder">
+  <span class="rec-dot"></span>
+  <span id="recTime">0.0s</span>
+  <button type="button" class="gola-btn gola-btn--sm gola-press" id="recStop">중지</button>
+</div>
+<div class="gola-toasts" id="golaToasts" role="status" aria-live="polite"></div>
+
+<div class="loading" id="loading" role="status" aria-live="polite">
+  <div class="loading-title">애피 날리기</div>
+  <div class="loading-bar"><i id="loadingBar"></i></div>
+  <div class="loading-step" id="loadingStep">three.js 불러오는 중</div>
+  <div class="loading-note">문제가 있으면 강력 새로고침(Ctrl+F5)을 해보세요.</div>
+</div>
+
+<div class="err" id="err" role="alert" aria-live="assertive">
+  <div class="err-title">실행 실패</div>
+  <p class="err-msg" id="errMsg">인터넷이 없거나, CDN이 없거나, 둘 다입니다.</p>
+  <details class="err-details"><summary>자세히</summary><pre id="errDetail"></pre></details>
+  <button class="gola-btn gola-press" id="retry" type="button">다시 시도</button>
+</div>
+
+<div class="gola-panel menu-panel" id="menu" role="dialog" aria-modal="true" aria-label="메뉴">
+  <div class="gola-panel-inner">
+    <div class="gola-panel-title gola-skew">메뉴</div>
+    <button id="menuClose" class="gola-modal-btn close menu-close" type="button" aria-label="메뉴 닫기">×</button>
+    <div class="gola-panel-main">
+      <div class="gola-panel-subtitle gola-skew">-설정-</div>
+      <div class="menu-grid">
+        <section class="menu-card">
+          <h2 class="gola-sec-title">-조작-</h2>
+          <div class="gola-slider-row">
+            <span class="gola-slider-letter vol">강도</span>
+            <input id="powerMenu" class="gola-slider enhanced" data-ch="vol" type="range" min="20" max="1000" step="10" value="100" aria-label="강도">
+            <span id="powerMenuVal" class="gola-vol-val">100%</span>
+          </div>
+          <div class="toggle-row">
+            <input type="checkbox" class="gola-check" id="optShake" checked>
+            <label class="gola-switch" for="optShake"><span class="gola-knob"></span></label>
+            <label class="gola-label" for="optShake" data-gola-text="화면 흔들림 : 켜짐|화면 흔들림 : 꺼짐" data-gola-for="optShake">화면 흔들림 : 켜짐</label>
+          </div>
+          <div class="toggle-row">
+            <input type="checkbox" class="gola-check" id="optShanshen">
+            <label class="gola-switch" for="optShanshen"><span class="gola-knob"></span></label>
+            <label class="gola-label" for="optShanshen" data-gola-text="샨셴부 : 켜짐|샨셴부 : 꺼짐" data-gola-for="optShanshen">샨셴부 : 꺼짐</label>
+          </div>
+          <p class="menu-copy">WASD 이동 / 우클릭 시점. 강도는 끌기와 던지기에 적용됩니다. 샨셴부 중에는 잡을 수 없습니다.</p>
+        </section>
+        <section class="menu-card">
+          <h2 class="gola-sec-title">-스킨-</h2>
+          <div class="skin-status">
+            <canvas id="skinPreview" class="skin-preview" width="8" height="8" aria-label="현재 스킨 얼굴"></canvas>
+            <div class="skin-name" id="skinName">Appie_1019</div>
+          </div>
+          <div class="skin-row">
+            <input id="skinInput" class="gola-input" type="text" maxlength="16" placeholder="마인크래프트 이름" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="마인크래프트 이름">
+            <button type="button" class="gola-btn gola-btn--sm gola-press" id="skinApply">적용</button>
+          </div>
+          <div class="obj-actions">
+            <button type="button" class="gola-btn gola-btn--sm gola-press" id="skinReset">기본 스킨</button>
+          </div>
+          <p class="menu-copy">자바 에디션 이름 3-16자. classic 4px 기준이라 slim 스킨은 팔이 살짝 다르게 보여요.</p>
+        </section>
+        <section class="menu-card">
+          <h2 class="gola-sec-title">-오브젝트-</h2>
+          <div class="obj-actions">
+            <button type="button" class="gola-btn gola-btn--sm gola-press" id="addPhoto">사진 추가</button>
+            <button type="button" class="gola-btn gola-btn--sm gola-press" id="addBlock">투명 블럭</button>
+            <button type="button" class="gola-btn gola-btn--sm gola-press" id="addWall">투명 벽</button>
+            <button type="button" class="gola-btn gola-btn--sm gola-press" id="editBase">베이스 편집</button>
+          </div>
+          <div class="toggle-row">
+            <input type="checkbox" class="gola-check" id="optEditMode">
+            <label class="gola-switch" for="optEditMode"><span class="gola-knob"></span></label>
+            <label class="gola-label" for="optEditMode" data-gola-text="에딧 모드 : 켜짐|에딧 모드 : 꺼짐" data-gola-for="optEditMode">에딧 모드 : 꺼짐</label>
+          </div>
+          <div class="toggle-row">
+            <input type="checkbox" class="gola-check" id="optWallFirst">
+            <label class="gola-switch" for="optWallFirst"><span class="gola-knob"></span></label>
+            <label class="gola-label" for="optWallFirst" data-gola-text="벽 우선 : 켜짐|벽 우선 : 꺼짐" data-gola-for="optWallFirst">벽 우선 : 꺼짐</label>
+          </div>
+          <p class="menu-copy">사진은 판으로 생성됩니다. 드래그로 옮기고 수치로 조절하세요. 벽 우선은 사진을 통과해 클릭합니다.</p>
+        </section>
+        <section class="menu-card">
+          <h2 class="gola-sec-title">-인터페이스-</h2>
+          <div class="toggle-row">
+            <input type="checkbox" class="gola-check" id="optFollow">
+            <label class="gola-switch" for="optFollow"><span class="gola-knob"></span></label>
+            <label class="gola-label" for="optFollow" data-gola-text="카메라 추적 : 켜짐|카메라 추적 : 꺼짐" data-gola-for="optFollow">카메라 추적 : 꺼짐</label>
+          </div>
+          <div class="toggle-row">
+            <input type="checkbox" class="gola-check" id="optShadow" checked>
+            <label class="gola-switch" for="optShadow"><span class="gola-knob"></span></label>
+            <label class="gola-label" for="optShadow" data-gola-text="그림자 : 켜짐|그림자 : 꺼짐" data-gola-for="optShadow">그림자 : 켜짐</label>
+          </div>
+          <div class="toggle-row">
+            <input type="checkbox" class="gola-check" id="optSound" checked>
+            <label class="gola-switch" for="optSound"><span class="gola-knob"></span></label>
+            <label class="gola-label" for="optSound" data-gola-text="효과음 : 켜짐|효과음 : 꺼짐" data-gola-for="optSound">효과음 : 켜짐</label>
+          </div>
+          <div class="toggle-row">
+            <input type="checkbox" class="gola-check" id="optToast" checked data-gola-allow>
+            <label class="gola-switch" for="optToast"><span class="gola-knob"></span></label>
+            <label class="gola-label" for="optToast" data-gola-text="토스트 메시지 : 켜짐|토스트 메시지 : 꺼짐" data-gola-for="optToast">토스트 메시지 : 켜짐</label>
+          </div>
+        </section>
+        <section class="menu-card">
+          <h2 class="gola-sec-title">-녹화-</h2>
+          <div class="obj-actions">
+            <button type="button" class="gola-btn gola-btn--sm gola-press" id="recGif">GIF 녹화</button>
+            <button type="button" class="gola-btn gola-btn--sm gola-press" id="recMp4">MP4 녹화</button>
+          </div>
+          <p class="menu-copy">캔버스만 저장합니다. 최대 15초.</p>
+        </section>
+      </div>
+      <div class="menu-hint">[R] 스폰 / [M] 효과음 / [Ctrl+Z·Y] 되돌리기</div>
+    </div>
+  </div>
+</div>
+
+<aside class="editor" id="editor" aria-label="오브젝트 설정">
+  <div class="editor-head">
+    <span id="editorTitle">사진</span>
+    <div class="editor-head-actions">
+      <button type="button" class="editor-icon" id="undoBtn" aria-label="실행 취소" disabled>되돌</button>
+      <button type="button" class="editor-icon" id="redoBtn" aria-label="다시 실행" disabled>다시</button>
+      <button type="button" class="editor-close" id="editorClose" aria-label="오브젝트 닫기">×</button>
+    </div>
+  </div>
+  <div class="editor-sub" id="editorSub">가로 · 세로 · 깊이</div>
+  <div class="editor-grid">
+    <label>크기</label>
+    <input id="editW" class="editor-num" type="number" min="0.2" max="200" step="0.1" value="1.6" aria-label="가로">
+    <input id="editH" class="editor-num" type="number" min="0.2" max="200" step="0.1" value="1.6" aria-label="세로">
+    <input id="editD" class="editor-num" type="number" min="0.05" max="40" step="0.1" value="1.2" aria-label="깊이">
+    <label>위치</label>
+    <input id="editX" class="editor-num" type="number" step="0.1" value="0" aria-label="X">
+    <input id="editY" class="editor-num" type="number" step="0.1" value="0" aria-label="Y">
+    <input id="editZ" class="editor-num" type="number" step="0.1" value="0" aria-label="Z">
+    <label>회전</label>
+    <input id="editRX" class="editor-num" type="number" step="1" value="0" aria-label="X 회전">
+    <input id="editRY" class="editor-num" type="number" step="1" value="0" aria-label="Y 회전">
+    <input id="editRZ" class="editor-num" type="number" step="1" value="0" aria-label="Z 회전">
+    <label>불투명도</label>
+    <input id="editO" class="editor-num" type="number" min="0" max="100" step="1" value="100" aria-label="불투명도">
+    <span class="editor-unit">%</span>
+    <span></span>
+  </div>
+  <div class="gizmo-modes" role="group" aria-label="기즈모 모드">
+    <button type="button" class="gizmo-mode is-active" data-gizmo="translate">이동</button>
+    <button type="button" class="gizmo-mode" data-gizmo="rotate">회전</button>
+    <button type="button" class="gizmo-mode" data-gizmo="scale">크기</button>
+  </div>
+  <div class="toggle-row editor-collide">
+    <input type="checkbox" class="gola-check" id="editCollide" checked>
+    <label class="gola-switch" for="editCollide"><span class="gola-knob"></span></label>
+    <label class="gola-label" for="editCollide" data-gola-text="충돌 : 켜짐|충돌 : 꺼짐" data-gola-for="editCollide">충돌 : 켜짐</label>
+  </div>
+  <div class="editor-actions">
+    <button type="button" class="gola-btn gola-btn--apply gola-press" id="objApply">적용</button>
+    <button type="button" class="gola-btn gola-btn--sm gola-press" id="objDup">복제</button>
+    <button type="button" class="gola-btn gola-btn--sm gola-press" id="objDel">삭제</button>
+  </div>
+</aside>
+<input type="file" id="photoInput" accept="image/*" style="display:none">
+
+<script src="./gola/gola.js" onerror="var s=document.createElement('script');s.src='https://cdn.jsdelivr.net/gh/Muffler-2597/GolaCSS@v1.0.0/gola.js';document.body.appendChild(s);"></script>
+<script>
+(function(){
+  var http = location.protocol === 'http:' || location.protocol === 'https:';
+  if(!http){ document.documentElement.classList.add('no-sdf'); return; }
+  var s = document.createElement('script');
+  s.src = './gola/gola-sdf.js';
+  document.body.appendChild(s);
+})();
+</script>
+<script>
+(function(){
+'use strict';
+
+var SKIN_URL = (location.protocol === 'http:' || location.protocol === 'https:') ? './Appie_1019-skin.png' : 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAE8klEQVR4Xu2ZXVITQRSF5w32oCvAN3xAEJ4oF2GVW7FAUfEH18AyFP+i4h/44BZchT9Y2vbXMxcnZ5LAnYlDRudUnUrS3em+5/Tt2xPIshPwenslvLt3OextXgpPbuR8f381PL15KTzeXApv7l4OBztr4cWt5fDy9kp4tLEU9mPb863l8DZ+T+frHAa3l8MgCkP0qzsr4VkU/uHBatiLRhzEV8zBCMRiDsIZy3vG63ydAyIRu7/NTq+GlBFR4MeHa8kMxJIdlg2HMRswjSygT+frHCyV2fXDKBrhpDriMGUvCiftaeMYsPOWHbzX+TqHlzGN2XUE897OP8aQ4m/jTmMQ4tl1MoF2iAk6X+fAzkOEI5L0fx3FkQkcCcxALGPIhGREcVz+iRqAIIgYdp1UJ7URiymWEbQ9K7KCPki7ztc5sOOkMjvMbUCRo/iR6mQBpnBEMAnRGMEY2jgSOt/MgWA5xwROFaei271vVxu7yiui6bMawKuRfubBFG4BTGK+VBQ386PBWnzG1EH8PBM1grNKcKRyMqO419nxdK1FQTHKY36L/Bn5JRKhjCf1GWuZgDgMYj4MYQx1gQxhPT5b4dR4WgeBELgFD9kxdprdYncRHoeG74UJ8/Pz6ZV6wDiM4P1xJhRZkgpmMTdtmIGxvMcgjNZ4Wgc7TIqb+Mcb+TVGRlgmlDPga/FKFtBnNwHC7XEYsuO82sORfeaY7G/n7Xxf42kdlp6pcEXh7CY7ZlcfgSI6K8T/iJybm0tHge+k+34n39n0iMxT4UZuHM8NHAcMooCaGczPcZiJa9ICt2d8K3BW5NhZ2/2sICbwOT0G38gfh02wGYm4VFRjP4KZi1uBdkyy+qDxtI60S8VZtquM4Gg3Qyh4pLwZQS34FUnxs2zhu1bc+L7tMEeEmmJXJu1mMEdC42kd5UqNGI4AxYvdI31NFEakH0Bb/DqkUP55FmCcPRTRb3XBfizRVs4o1syPxQzcAor5eL7LzEqpX3AiduOYJtT5FDo+fP40RB3vxrQM0MA08HHU+RQ6XtfR8W70BvxvBqhgZZYHdUzt14DGBab9bXFY7QhcWFgITagLlnnW4qHqrUAFeakLlhmOjhK1vU2q3gpUkJe6YJm9AVMwoClUbwUqyEsNeCj4aRggxdRL1TsKDKrN3QnshAH6BS814KHgewN6A3oDZt6ACAbV5u4EdsWAIZw/dy5Moo5XXCfoMaDv6gnU+RTMUab2N4YKVup4hRmg7b0B/5sBZRPs80waoAK91ICMaoD269hR0HF1WNY6EhcXF0MT6oJGhfYrFdpfl6q3grKYK+vrx1Sh46gLzhpVbwUqyEtdcBSzgtquHBTU9iZUvRWoIC91wbosC5+mCaq3AhXkpS5Yl7b7084C1VuBCvJSF6zLPgPGvG9K1VuBCvJSF5w1qt5RYFBt6oJ1OBhD+q41ZPa3oWKmTV1v6tBHWy/1WX7a1Hj/OlSgUscr9H+HWS6izInYzSb/QUTHKxpnkApW6nhFb0BvQMcMUIFeZiJQDTiJKthLFexl4wch/V+hlyrISxXk5VgDTvu3ARXkpQryUgV5OdaA01IFeamCvFRBXp65AU2hgrw8ewOkynupgrxsbIDeAl6qIC9VkJeNDdCA2qYK8rI3QFPSSw2obervfy+zptCA2qbG44Y+2nqZ5S7WpgryMmuI3x1KdGPUNYsUAAAAAElFTkSuQmCC';
+
+var THREE_URLS = [
+  'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js',
+  'https://unpkg.com/three@0.160.0/build/three.module.js',
+  'https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.module.js'
+];
+
+var TRANSFORM_URLS = [
+  'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/controls/TransformControls.js',
+  'https://unpkg.com/three@0.160.0/examples/jsm/controls/TransformControls.js'
+];
+
+var CANNON_URLS = [
+  'https://cdn.jsdelivr.net/npm/cannon-es@0.20.0/dist/cannon-es.js',
+  'https://unpkg.com/cannon-es@0.20.0/dist/cannon-es.js',
+  'https://esm.sh/cannon-es@0.20.0'
+];
+
+var byId = function(id){ return document.getElementById(id); };
+var loadingEl = byId('loading');
+var loadingBar = byId('loadingBar');
+var loadingStep = byId('loadingStep');
+var errEl = byId('err');
+var errMsg = byId('errMsg');
+var errDetail = byId('errDetail');
+
+function setLoad(p, text){
+  if(loadingBar) loadingBar.style.width = Math.max(3, Math.min(100, Math.round(p * 100))) + '%';
+  if(text && loadingStep) loadingStep.textContent = text;
+}
+
+function showError(msg, detail){
+  if(loadingEl) loadingEl.classList.add('hidden');
+  if(!errEl) return;
+  errEl.classList.add('open');
+  if(errMsg) errMsg.textContent = msg;
+  if(errDetail) errDetail.textContent = detail || '';
+}
+
+function toast(msg, cls, force){
+  try{
+    if(window.golaToast) window.golaToast(msg, cls || '', !!force);
+  }catch(e){}
+}
+
+byId('retry').addEventListener('click', function(){ location.reload(); });
+
+function loadThree(i){
+  i = i || 0;
+  if(i >= THREE_URLS.length){
+    showError('three.js를 불러오지 못했습니다.', '시도한 주소:\n' + THREE_URLS.join('\n'));
+    return;
+  }
+  setLoad(0.12 + i * 0.18, 'three.js 불러오는 중 (' + (i + 1) + '/' + THREE_URLS.length + ')');
+  import(THREE_URLS[i]).then(function(mod){
+    loadCannon(0, mod);
+  }).catch(function(){
+    loadThree(i + 1);
+  });
+}
+
+function loadCannon(i, threeMod){
+  if(i >= CANNON_URLS.length){
+    showError('cannon-es를 불러오지 못했습니다.', '시도한 주소:\n' + CANNON_URLS.join('\n'));
+    return;
+  }
+  setLoad(0.58 + i * 0.1, 'cannon-es 불러오는 중 (' + (i + 1) + '/' + CANNON_URLS.length + ')');
+  import(CANNON_URLS[i]).then(function(cmod){
+    try{
+      main(threeMod, cmod);
+    }catch(e){
+      showError('초기화 중 오류가 발생했습니다.', String(e && e.stack ? e.stack : e));
+    }
+  }).catch(function(){
+    loadCannon(i + 1, threeMod);
+  });
+}
+
+function main(THREE, CANNON){
+  var TUNE = {
+    gravity: -9.82,
+    solverIterations: 15,
+    linearDamping: 0.06,
+    angularDamping: 0.22,
+    sleepSpeedLimit: 0.22,
+    sleepTimeLimit: 0.7,
+    friction: 0.7,
+    restitution: 0.2,
+    dragK: 240,
+    dragDamp: 20,
+    dragMax: 1600,
+    maxSpeed: 26,
+    flingUp: [4.8, 7.4],
+    flingSide: [1.8, 3.8],
+    flingSpin: 7.5,
+    spin: 8.5
+  };
+
+  var STORE_KEY = 'appieragdoll.settings.v1';
+  var DEFAULTS = {power:100, shadows:true, sound:true, shake:true, toast:true, seenTutorial:false, skin:'Appie_1019', skinURL:''};
+  var settings = Object.assign({}, DEFAULTS, (function(){
+    try{
+      var raw = localStorage.getItem(STORE_KEY);
+      var obj = raw ? JSON.parse(raw) : null;
+      return obj && typeof obj === 'object' ? obj : {};
+    }catch(e){ return {}; }
+  })());
+  settings.power = Math.max(20, Math.min(1000, Number(settings.power) || 100));
+  settings.power = Math.round(settings.power / 10) * 10;
+  if(typeof settings.skin !== 'string' || !settings.skin) settings.skin = 'Appie_1019';
+  if(typeof settings.skinURL !== 'string') settings.skinURL = '';
+  delete settings.cam;
+
+  function saveSettings(){
+    try{ localStorage.setItem(STORE_KEY, JSON.stringify(settings)); }catch(e){}
+  }
+
+  var canvas = byId('c');
+  var renderer;
+  try{
+    renderer = new THREE.WebGLRenderer({canvas:canvas, antialias:true, alpha:false, powerPreference:'high-performance', preserveDrawingBuffer:true});
+  }catch(e){
+    showError('WebGL을 사용할 수 없습니다.', String(e && e.message ? e.message : e));
+    return;
+  }
+  var mobile = window.innerWidth < 760;
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  renderer.setSize(window.innerWidth, window.innerHeight, false);
+  renderer.outputColorSpace = THREE.SRGBColorSpace;
+  renderer.toneMapping = THREE.NoToneMapping;
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+  var scene = new THREE.Scene();
+  scene.background = new THREE.Color(0xffffff);
+
+  var camera = new THREE.PerspectiveCamera(46, 1, 0.1, 120);
+  var camYaw = 0;
+  var camPitch = 0;
+  var CAM_SPEED = 5.0;
+  var CAM_LIMIT = 45;
+  var CAM_MIN_Y = 0.4;
+  var CAM_MAX_Y = 20;
+  var keys = {w:false, a:false, s:false, d:false, shift:false};
+  var followCam = false;
+  var followOffset = new THREE.Vector3(4.5, 2.5, 5.75);
+  var shakeT = 0;
+  var shakeDur = 0.16;
+  var shakeMag = 0;
+
+  var hemi = new THREE.HemisphereLight(0xffffff, 0xe4e4e4, 0.92);
+  scene.add(hemi);
+  scene.add(new THREE.AmbientLight(0xffffff, 0.12));
+
+  var sun = new THREE.DirectionalLight(0xffffff, 1.38);
+  sun.position.set(6.0, 11.0, 8.0);
+  sun.castShadow = true;
+  sun.shadow.mapSize.set(mobile ? 1024 : 2048, mobile ? 1024 : 2048);
+  sun.shadow.camera.left = -38;
+  sun.shadow.camera.right = 38;
+  sun.shadow.camera.top = 38;
+  sun.shadow.camera.bottom = -38;
+  sun.shadow.camera.near = 0.5;
+  sun.shadow.camera.far = 90;
+  sun.shadow.bias = -0.0004;
+  sun.shadow.normalBias = 0.025;
+  sun.shadow.radius = 3;
+  sun.target.position.set(0, 0.9, 0);
+  scene.add(sun);
+  scene.add(sun.target);
+
+  var BASE = {width:64, depth:64, thickness:0.2, x:0, z:0, top:0};
+  var baseBox = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshLambertMaterial({color:0xffffff}));
+  baseBox.receiveShadow = true;
+  scene.add(baseBox);
+  var baseGrid = new THREE.GridHelper(64, 64, 0x000000, 0x000000);
+  baseGrid.material.transparent = true;
+  baseGrid.material.opacity = 0.07;
+  baseGrid.material.depthWrite = false;
+  scene.add(baseGrid);
+  var baseBorderMat = new THREE.MeshBasicMaterial({color:0x000000});
+  var baseBorders = [];
+  for(var bi = 0; bi < 4; bi++){
+    var bm = new THREE.Mesh(new THREE.BoxGeometry(1, 0.025, 1), baseBorderMat);
+    baseBorders.push(bm);
+    scene.add(bm);
+  }
+  function updateBaseVisual(){
+    baseBox.scale.set(BASE.width, BASE.thickness, BASE.depth);
+    baseBox.position.set(BASE.x, BASE.top - BASE.thickness / 2, BASE.z);
+    baseGrid.position.set(BASE.x, BASE.top + 0.003, BASE.z);
+    baseGrid.scale.set(BASE.width / 64, 1, BASE.depth / 64);
+    var y = BASE.top + 0.006;
+    baseBorders[0].scale.set(BASE.width + 0.08, 1, 0.06);
+    baseBorders[0].position.set(BASE.x, y, BASE.z - BASE.depth / 2);
+    baseBorders[1].scale.set(BASE.width + 0.08, 1, 0.06);
+    baseBorders[1].position.set(BASE.x, y, BASE.z + BASE.depth / 2);
+    baseBorders[2].scale.set(0.06, 1, BASE.depth + 0.08);
+    baseBorders[2].position.set(BASE.x - BASE.width / 2, y, BASE.z);
+    baseBorders[3].scale.set(0.06, 1, BASE.depth + 0.08);
+    baseBorders[3].position.set(BASE.x + BASE.width / 2, y, BASE.z);
+    updateShadowBounds();
+  }
+  function updateShadowBounds(){
+    var half = Math.max(18, Math.min(45, Math.max(BASE.width, BASE.depth) / 2 + 6));
+    sun.shadow.camera.left = -half;
+    sun.shadow.camera.right = half;
+    sun.shadow.camera.top = half;
+    sun.shadow.camera.bottom = -half;
+    sun.shadow.camera.far = Math.max(42, half * 2 + 12);
+    sun.shadow.camera.updateProjectionMatrix();
+  }
+  updateBaseVisual();
+
+  var texLoader = new THREE.TextureLoader();
+  texLoader.setCrossOrigin('anonymous');
+  var texReady = false;
+  var tex = texLoader.load(SKIN_URL, function(t){
+    t.magFilter = THREE.NearestFilter;
+    t.minFilter = THREE.NearestFilter;
+    t.generateMipmaps = false;
+    t.colorSpace = THREE.SRGBColorSpace;
+    t.needsUpdate = true;
+    texReady = true;
+    try{ drawSkinPreview(t.image); }catch(e){}
+    try{ restoreSavedSkin(); }catch(e){}
+  });
+  tex.magFilter = THREE.NearestFilter;
+  tex.minFilter = THREE.NearestFilter;
+  tex.generateMipmaps = false;
+  tex.colorSpace = THREE.SRGBColorSpace;
+
+  var skinMat = new THREE.MeshLambertMaterial({map:tex, alphaTest:0.5, transparent:false, side:THREE.FrontSide});
+  var depthMat = new THREE.MeshDepthMaterial({depthPacking:THREE.RGBADepthPacking, map:tex, alphaTest:0.5});
+
+  var skinInput = byId('skinInput');
+  var skinApplyBtn = byId('skinApply');
+  var skinResetBtn = byId('skinReset');
+  var skinPreview = byId('skinPreview');
+  var skinNameEl = byId('skinName');
+  var skinLoading = false;
+  var currentSkinName = settings.skin || 'Appie_1019';
+
+  function validMinecraftName(n){
+    return /^[A-Za-z0-9_]{3,16}$/.test(n);
+  }
+
+  function drawSkinPreview(img){
+    if(!skinPreview || !img) return;
+    var w = img.width || 64;
+    var h = img.height || 64;
+    if(!w || !h) return;
+    try{
+      var ctx = skinPreview.getContext('2d');
+      ctx.imageSmoothingEnabled = false;
+      ctx.clearRect(0, 0, 8, 8);
+      ctx.drawImage(img, 8, 8, 8, 8, 0, 0, 8, 8);
+      if(h >= 16){
+        try{ ctx.drawImage(img, 40, 8, 8, 8, 0, 0, 8, 8); }catch(e2){}
+      }
+    }catch(e){}
+  }
+
+  function prepSkinTexture(t){
+    t.magFilter = THREE.NearestFilter;
+    t.minFilter = THREE.NearestFilter;
+    t.generateMipmaps = false;
+    t.colorSpace = THREE.SRGBColorSpace;
+    try{
+      var img = t.image;
+      if(img && img.width === 64 && img.height === 32){
+        var c = document.createElement('canvas');
+        c.width = 64;
+        c.height = 64;
+        var cx = c.getContext('2d');
+        cx.clearRect(0, 0, 64, 64);
+        cx.drawImage(img, 0, 0);
+        t.image = c;
+      }
+    }catch(e){}
+    t.needsUpdate = true;
+    return t;
+  }
+
+  function setSkinTexture(t, name, url){
+    prepSkinTexture(t);
+    var old = skinMat.map;
+    skinMat.map = t;
+    skinMat.needsUpdate = true;
+    depthMat.map = t;
+    depthMat.needsUpdate = true;
+    for(var i = 0; i < appies.length; i++){
+      if(appies[i].skinMat){
+        appies[i].skinMat.map = t;
+        appies[i].skinMat.needsUpdate = true;
+      }
+    }
+    if(old && old !== t){
+      try{ old.dispose(); }catch(e){}
+    }
+    currentSkinName = name;
+    settings.skin = name;
+    settings.skinURL = url || '';
+    saveSettings();
+    if(skinNameEl) skinNameEl.textContent = name;
+    try{ drawSkinPreview(t.image); }catch(e){}
+  }
+
+  function trySkinURLs(urls, idx, ok, fail){
+    if(idx >= urls.length){
+      if(fail) fail();
+      return;
+    }
+    texLoader.load(urls[idx], function(t){
+      ok(t, urls[idx]);
+    }, undefined, function(){
+      trySkinURLs(urls, idx + 1, ok, fail);
+    });
+  }
+
+  function fetchSkinJSON(url, timeoutMs){
+    timeoutMs = timeoutMs || 8000;
+    return new Promise(function(resolve, reject){
+      var done = false;
+      var timer = setTimeout(function(){
+        if(!done){ done = true; reject(new Error('timeout')); }
+      }, timeoutMs);
+      fetch(url, {headers:{'Accept':'application/json'}}).then(function(r){
+        if(done) return;
+        done = true;
+        clearTimeout(timer);
+        if(!r.ok){ reject(new Error('http ' + r.status)); return; }
+        r.json().then(resolve, reject);
+      }).catch(function(e){
+        if(done) return;
+        done = true;
+        clearTimeout(timer);
+        reject(e);
+      });
+    });
+  }
+
+  function setSkinBusy(busy){
+    skinLoading = busy;
+    if(skinApplyBtn) skinApplyBtn.disabled = busy;
+    if(skinInput) skinInput.disabled = busy;
+    if(skinResetBtn) skinResetBtn.disabled = busy;
+  }
+
+  function skinLoadSuccess(t, url, realName){
+    setSkinTexture(t, realName, url);
+    setSkinBusy(false);
+    toast(realName + ' 스킨을 불러왔습니다.', 'gola-toast--gold', true);
+  }
+
+  function skinLoadFail(){
+    setSkinBusy(false);
+    toast('스킨을 불러오지 못했습니다.', 'gola-toast--red', true);
+  }
+
+  function applySkinByName(raw){
+    var name = (raw || '').trim();
+    if(skinLoading) return;
+    if(!validMinecraftName(name)){
+      toast('이름은 영문·숫자·밑줄 3-16자예요.', 'gola-toast--red', true);
+      return;
+    }
+    if(name === currentSkinName){
+      toast(name + ' 스킨을 불러왔습니다.', 'gola-toast--gold');
+      return;
+    }
+    setSkinBusy(true);
+    toast(name + ' 스킨을 불러오는 중...', 'gola-toast--gold');
+    var enc = encodeURIComponent(name);
+    fetchSkinJSON('https://playerdb.co/api/player/minecraft/' + enc).then(function(data){
+      var p = data && data.data && data.data.player;
+      if(!p) throw new Error('no player');
+      var urls = [];
+      if(p.skin_texture) urls.push(String(p.skin_texture).replace(/^http:\/\//, 'https://'));
+      var rawId = p.raw_id || (p.id ? String(p.id).replace(/-/g, '') : '');
+      if(rawId){
+        urls.push('https://crafatar.com/skins/' + rawId + '?default=MHF_Steve');
+        urls.push('https://crafthead.net/skin/' + rawId);
+      }
+      urls.push('https://crafthead.net/skin/' + enc);
+      urls.push('https://minotar.net/skin/' + enc);
+      var realName = p.username || name;
+      trySkinURLs(urls, 0, function(t, url){ skinLoadSuccess(t, url, realName); }, skinLoadFail);
+    }).catch(function(){
+      fetchSkinJSON('https://api.ashcon.app/mojang/v2/user/' + enc).then(function(a){
+        var urls = [];
+        if(a && a.textures && a.textures.skin && a.textures.skin.url) urls.push(String(a.textures.skin.url).replace(/^http:\/\//, 'https://'));
+        var uuid = a && (a.uuid || a.id) ? String(a.uuid || a.id).replace(/-/g, '') : '';
+        if(uuid){
+          urls.push('https://crafatar.com/skins/' + uuid + '?default=MHF_Steve');
+          urls.push('https://crafthead.net/skin/' + uuid);
+        }
+        urls.push('https://crafthead.net/skin/' + enc);
+        urls.push('https://minotar.net/skin/' + enc);
+        var realName = (a && (a.username || a.name)) || name;
+        trySkinURLs(urls, 0, function(t, url){ skinLoadSuccess(t, url, realName); }, skinLoadFail);
+      }).catch(function(){
+        trySkinURLs(['https://crafthead.net/skin/' + enc, 'https://minotar.net/skin/' + enc], 0, function(t, url){ skinLoadSuccess(t, url, name); }, skinLoadFail);
+      });
+    });
+  }
+
+  function resetSkin(){
+    if(skinLoading) return;
+    if(currentSkinName === 'Appie_1019' && !settings.skinURL) return;
+    setSkinBusy(true);
+    texLoader.load(SKIN_URL, function(t){
+      setSkinTexture(t, 'Appie_1019', '');
+      settings.skin = 'Appie_1019';
+      settings.skinURL = '';
+      saveSettings();
+      setSkinBusy(false);
+      toast('기본 스킨으로 돌아왔습니다.', 'gola-toast--gold', true);
+    }, undefined, function(){
+      setSkinBusy(false);
+      toast('기본 스킨을 불러오지 못했습니다.', 'gola-toast--red', true);
+    });
+  }
+
+  function restoreSavedSkin(){
+    if(skinNameEl) skinNameEl.textContent = currentSkinName;
+    if(!settings.skinURL || currentSkinName === 'Appie_1019') return;
+    var url = settings.skinURL;
+    var sname = currentSkinName;
+    texLoader.load(url, function(t){
+      setSkinTexture(t, sname, url);
+    }, undefined, function(){
+      var enc = encodeURIComponent(sname);
+      trySkinURLs(['https://crafthead.net/skin/' + enc, 'https://minotar.net/skin/' + enc], 0, function(t2, url2){
+        setSkinTexture(t2, sname, url2);
+      }, function(){});
+    });
+  }
+
+  if(skinNameEl) skinNameEl.textContent = currentSkinName;
+  if(skinApplyBtn) skinApplyBtn.addEventListener('click', function(){
+    initAudio();
+    applySkinByName(skinInput ? skinInput.value : '');
+  });
+  if(skinInput) skinInput.addEventListener('keydown', function(e){
+    if(e.key === 'Enter'){
+      e.preventDefault();
+      e.stopPropagation();
+      initAudio();
+      applySkinByName(skinInput.value);
+    }
+  });
+  if(skinResetBtn) skinResetBtn.addEventListener('click', function(){
+    initAudio();
+    resetSkin();
+  });
+
+  function boxGeo(xa, xb, ya, yb, za, zb, rc){
+    var P = [], N = [], U = [], I = [], vc = 0;
+    function quad(v, uv, n){
+      for(var i = 0; i < 4; i++){
+        P.push(v[i][0], v[i][1], v[i][2]);
+        N.push(n[0], n[1], n[2]);
+        U.push(uv[i][0], uv[i][1]);
+      }
+      I.push(vc, vc + 1, vc + 2, vc, vc + 2, vc + 3);
+      vc += 4;
+    }
+    function R(x1, y1, x2, y2){ return [x1 / 64, 1 - y1 / 64, x2 / 64, 1 - y2 / 64]; }
+    var r, q;
+    r = R(rc[8], rc[9], rc[10], rc[11]);
+    q = [[r[0], r[3]], [r[2], r[3]], [r[2], r[1]], [r[0], r[1]]];
+    quad([[xb, ya, zb], [xb, ya, za], [xb, yb, za], [xb, yb, zb]], q, [1, 0, 0]);
+    r = R(rc[0], rc[1], rc[2], rc[3]);
+    q = [[r[0], r[3]], [r[2], r[3]], [r[2], r[1]], [r[0], r[1]]];
+    quad([[xa, ya, za], [xa, ya, zb], [xa, yb, zb], [xa, yb, za]], q, [-1, 0, 0]);
+    r = R(rc[4], rc[5], rc[6], rc[7]);
+    q = [[r[0], r[3]], [r[2], r[3]], [r[2], r[1]], [r[0], r[1]]];
+    quad([[xa, yb, zb], [xb, yb, zb], [xb, yb, za], [xa, yb, za]], q, [0, 1, 0]);
+    r = R(rc[20], rc[21], rc[22], rc[23]);
+    q = [[r[0], r[3]], [r[2], r[3]], [r[2], r[1]], [r[0], r[1]]];
+    quad([[xa, ya, za], [xb, ya, za], [xb, ya, zb], [xa, ya, zb]], q, [0, -1, 0]);
+    r = R(rc[12], rc[13], rc[14], rc[15]);
+    q = [[r[0], r[3]], [r[2], r[3]], [r[2], r[1]], [r[0], r[1]]];
+    quad([[xa, ya, zb], [xb, ya, zb], [xb, yb, zb], [xa, yb, zb]], q, [0, 0, 1]);
+    r = R(rc[16], rc[17], rc[18], rc[19]);
+    q = [[r[0], r[3]], [r[2], r[3]], [r[2], r[1]], [r[0], r[1]]];
+    quad([[xb, ya, za], [xa, ya, za], [xa, yb, za], [xb, yb, za]], q, [0, 0, -1]);
+    var g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(P, 3));
+    g.setAttribute('normal', new THREE.Float32BufferAttribute(N, 3));
+    g.setAttribute('uv', new THREE.Float32BufferAttribute(U, 2));
+    g.setIndex(I);
+    return g;
+  }
+
+  var HEAD  = [0,8,8,16, 8,0,16,8, 16,8,24,16, 8,8,16,16, 24,8,32,16, 16,0,24,8];
+  var HEAD2 = [32,8,40,16, 40,0,48,8, 48,8,56,16, 40,8,48,16, 56,8,64,16, 48,0,56,8];
+  var BODY  = [16,20,20,32, 20,16,28,20, 28,20,32,32, 20,20,28,32, 32,20,40,32, 28,16,36,20];
+  var BODY2 = [16,36,20,48, 20,32,28,36, 28,36,32,48, 20,36,28,48, 32,36,40,48, 28,32,36,36];
+  var ARMR  = [40,20,44,32, 44,16,48,20, 48,20,52,32, 44,20,48,32, 52,20,56,32, 48,16,52,20];
+  var ARMR2 = [40,36,44,48, 44,32,48,36, 48,36,52,48, 44,36,48,48, 52,36,56,48, 48,32,52,36];
+  var ARML  = [32,52,36,64, 36,48,40,52, 40,52,44,64, 36,52,40,64, 44,52,48,64, 40,48,44,52];
+  var ARML2 = [48,52,52,64, 52,48,56,52, 56,52,60,64, 52,52,56,64, 60,52,64,64, 56,48,60,52];
+  var LEGR  = [0,20,4,32, 4,16,8,20, 8,20,12,32, 4,20,8,32, 12,20,16,32, 8,16,12,20];
+  var LEGR2 = [0,36,4,48, 4,32,8,36, 8,36,12,48, 4,36,8,48, 12,36,16,48, 8,32,12,36];
+  var LEGL  = [16,52,20,64, 20,48,24,52, 24,52,28,64, 20,52,24,64, 28,52,32,64, 24,48,28,52];
+  var LEGL2 = [0,52,4,64, 4,48,8,52, 8,52,12,64, 4,52,8,64, 12,52,16,64, 8,48,12,52];
+
+  function meshPart(geo, outer, mat){
+    var m = new THREE.Mesh(geo, mat || skinMat);
+    m.castShadow = true;
+    m.receiveShadow = true;
+    if(outer) m.customDepthMaterial = depthMat;
+    return m;
+  }
+
+  function partGroup(xa, xb, ya, yb, za, zb, rc, oxa, oxb, oya, oyb, oza, ozb, rc2, mat){
+    var g = new THREE.Group();
+    g.add(meshPart(boxGeo(xa, xb, ya, yb, za, zb, rc), false, mat));
+    g.add(meshPart(boxGeo(oxa, oxb, oya, oyb, oza, ozb, rc2), true, mat));
+    scene.add(g);
+    return g;
+  }
+
+  var world = new CANNON.World({gravity:new CANNON.Vec3(0, TUNE.gravity, 0)});
+  world.broadphase = new CANNON.SAPBroadphase(world);
+  world.allowSleep = true;
+  world.solver.iterations = TUNE.solverIterations;
+  world.solver.tolerance = 0.001;
+
+  var physMat = new CANNON.Material('appie');
+  var groundMat = new CANNON.Material('ground');
+  var propMat = new CANNON.Material('prop');
+  world.addContactMaterial(new CANNON.ContactMaterial(groundMat, physMat, {
+    friction:TUNE.friction,
+    restitution:TUNE.restitution
+  }));
+  world.addContactMaterial(new CANNON.ContactMaterial(propMat, physMat, {
+    friction:0.45,
+    restitution:0.3
+  }));
+  world.addContactMaterial(new CANNON.ContactMaterial(physMat, physMat, {
+    friction:0.32,
+    restitution:0.45
+  }));
+
+  var baseBody = new CANNON.Body({mass:0, material:groundMat, collisionFilterGroup:1, collisionFilterMask:-1});
+  baseBody.addShape(new CANNON.Box(new CANNON.Vec3(BASE.width / 2, BASE.thickness / 2, BASE.depth / 2)));
+  baseBody.position.set(BASE.x, BASE.top - BASE.thickness / 2, BASE.z);
+  world.addBody(baseBody);
+  function updateBaseBody(){
+    var shape = baseBody.shapes[0];
+    shape.halfExtents.set(Math.max(0.2, BASE.width / 2), Math.max(0.05, BASE.thickness / 2), Math.max(0.2, BASE.depth / 2));
+    shape.updateConvexPolyhedronRepresentation();
+    baseBody.updateBoundingRadius();
+    baseBody.position.set(BASE.x, BASE.top - BASE.thickness / 2, BASE.z);
+    baseBody.aabbNeedsUpdate = true;
+    baseBody.updateAABB();
+  }
+
+  function ragBody(hx, hy, hz, mass, px, py, pz, groupBit){
+    var b = new CANNON.Body({
+      mass:mass,
+      material:physMat,
+      position:new CANNON.Vec3(px, py, pz),
+      linearDamping:TUNE.linearDamping,
+      angularDamping:TUNE.angularDamping,
+      allowSleep:true,
+      sleepSpeedLimit:TUNE.sleepSpeedLimit,
+      sleepTimeLimit:TUNE.sleepTimeLimit,
+      collisionFilterGroup:groupBit || 2,
+      collisionFilterMask:1 | 2
+    });
+    b.addShape(new CANNON.Box(new CANNON.Vec3(hx, hy, hz)));
+    world.addBody(b);
+    return b;
+  }
+
+  var PZ = 0.3;
+  var appies = [];
+  var activeAppie = null;
+  var parts = [];
+
+  function coneLink(a, pa, b, pb, angle, twist){
+    var c = new CANNON.ConeTwistConstraint(a, b, {
+      pivotA:new CANNON.Vec3(pa[0], pa[1], pa[2]),
+      pivotB:new CANNON.Vec3(pb[0], pb[1], pb[2]),
+      axisA:new CANNON.Vec3(0, 1, 0),
+      axisB:new CANNON.Vec3(0, 1, 0),
+      angle:angle,
+      twistAngle:twist,
+      maxForce:1e6,
+      collideConnected:false
+    });
+    world.addConstraint(c);
+    return c;
+  }
+
+  function syncAppie(ap){
+    for(var i = 0; i < ap.parts.length; i++){
+      ap.parts[i].group.position.copy(ap.parts[i].body.position);
+      ap.parts[i].group.quaternion.copy(ap.parts[i].body.quaternion);
+    }
+  }
+
+  function createAppie(offsetX, offsetZ){
+    var bx = BASE.x + (offsetX || 0);
+    var bz = BASE.z + (offsetZ || 0);
+    var by = BASE.top;
+    var groupBit = 1 << (2 + (appies.length % 29));
+    var apSkinMat = skinMat.clone();
+    var torso = ragBody(0.25, 0.375, 0.125, 3.2, bx, by + 1.125, bz + PZ, groupBit);
+    var head  = ragBody(0.25, 0.25, 0.25, 0.9, bx, by + 1.75, bz + PZ, groupBit);
+    var armL  = ragBody(0.125, 0.375, 0.125, 0.8, bx + 0.375, by + 1.06, bz + PZ, groupBit);
+    var armR  = ragBody(0.125, 0.375, 0.125, 0.8, bx - 0.375, by + 1.06, bz + PZ, groupBit);
+    var legL  = ragBody(0.125, 0.375, 0.125, 1.5, bx + 0.125, by + 0.375, bz + PZ, groupBit);
+    var legR  = ragBody(0.125, 0.375, 0.125, 1.5, bx - 0.125, by + 0.375, bz + PZ, groupBit);
+    var constraints = [
+      coneLink(torso, [0, 0.375, 0], head, [0, -0.25, 0], 0.62, 0.55),
+      coneLink(torso, [0.375, 0.31, 0], armL, [0, 0.375, 0], 1.45, 0.55),
+      coneLink(torso, [-0.375, 0.31, 0], armR, [0, 0.375, 0], 1.45, 0.55),
+      coneLink(torso, [0.125, -0.375, 0], legL, [0, 0.375, 0], 1.15, 0.45),
+      coneLink(torso, [-0.125, -0.375, 0], legR, [0, 0.375, 0], 1.15, 0.45)
+    ];
+    var gTorso = partGroup(-0.25, 0.25, -0.375, 0.375, -0.125, 0.125, BODY, -0.265625, 0.265625, -0.390625, 0.390625, -0.140625, 0.140625, BODY2, apSkinMat);
+    var gHead  = partGroup(-0.25, 0.25, -0.25, 0.25, -0.25, 0.25, HEAD, -0.28125, 0.28125, -0.28125, 0.28125, -0.28125, 0.28125, HEAD2, apSkinMat);
+    var gArmL  = partGroup(-0.125, 0.125, -0.375, 0.375, -0.125, 0.125, ARML, -0.140625, 0.140625, -0.390625, 0.390625, -0.140625, 0.140625, ARML2, apSkinMat);
+    var gArmR  = partGroup(-0.125, 0.125, -0.375, 0.375, -0.125, 0.125, ARMR, -0.140625, 0.140625, -0.390625, 0.390625, -0.140625, 0.140625, ARMR2, apSkinMat);
+    var gLegL  = partGroup(-0.125, 0.125, -0.375, 0.375, -0.125, 0.125, LEGL, -0.140625, 0.140625, -0.390625, 0.390625, -0.140625, 0.140625, LEGL2, apSkinMat);
+    var gLegR  = partGroup(-0.125, 0.125, -0.375, 0.375, -0.125, 0.125, LEGR, -0.140625, 0.140625, -0.390625, 0.390625, -0.140625, 0.140625, LEGR2, apSkinMat);
+    var ap = {
+      parts:[
+        {body:torso, group:gTorso, ix:0, iy:1.125, iz:PZ},
+        {body:head, group:gHead, ix:0, iy:1.75, iz:PZ},
+        {body:armL, group:gArmL, ix:0.375, iy:1.06, iz:PZ},
+        {body:armR, group:gArmR, ix:-0.375, iy:1.06, iz:PZ},
+        {body:legL, group:gLegL, ix:0.125, iy:0.375, iz:PZ},
+        {body:legR, group:gLegR, ix:-0.125, iy:0.375, iz:PZ}
+      ],
+      bodies:[torso, head, armL, armR, legL, legR],
+      constraints:constraints,
+      alive:true,
+      groupBit:groupBit,
+      skinMat:apSkinMat,
+      hurtFlashT:0,
+      offsetX:offsetX || 0,
+      offsetZ:offsetZ || 0
+    };
+    for(var i = 0; i < ap.parts.length; i++){
+      ap.parts[i].appie = ap;
+      ap.parts[i].body.appie = ap;
+      ap.parts[i].body.addEventListener('collide', onCollide);
+    }
+    syncAppie(ap);
+    return ap;
+  }
+
+  function syncAllMeshes(){
+    for(var i = 0; i < appies.length; i++){
+      for(var j = 0; j < appies[i].parts.length; j++){
+        var p = appies[i].parts[j];
+        p.group.position.copy(p.body.position);
+        p.group.quaternion.copy(p.body.quaternion);
+      }
+    }
+  }
+
+  function wakeAll(ap){
+    ap = ap || activeAppie;
+    if(!ap) return;
+    for(var i = 0; i < ap.parts.length; i++) ap.parts[i].body.wakeUp();
+  }
+
+  function sleepAll(ap){
+    ap = ap || activeAppie;
+    if(!ap) return;
+    for(var i = 0; i < ap.parts.length; i++){
+      ap.parts[i].body.velocity.set(0, 0, 0);
+      ap.parts[i].body.angularVelocity.set(0, 0, 0);
+      ap.parts[i].body.sleep();
+    }
+  }
+
+  function setActiveAppie(ap){
+    if(!ap || !ap.alive) return;
+    activeAppie = ap;
+    parts = ap.parts;
+  }
+
+  function firstAliveAppie(){
+    for(var i = 0; i < appies.length; i++) if(appies[i].alive) return appies[i];
+    return null;
+  }
+
+  function allPartGroups(){
+    var out = [];
+    for(var i = 0; i < appies.length; i++){
+      for(var j = 0; j < appies[i].parts.length; j++) out.push(appies[i].parts[j].group);
+    }
+    return out;
+  }
+
+  function freeSpawnOffset(){
+    var maxX = Math.max(1, BASE.width / 2 - 0.7);
+    var maxZ = Math.max(1, BASE.depth / 2 - 0.7);
+    var stepR = Math.max(0.22, Math.min(maxX, maxZ) * 0.09);
+    for(var i = 0; i < 40; i++){
+      var ang = i * 2.399963;
+      var rad = 0.8 + i * stepR;
+      var ox = Math.cos(ang) * rad;
+      var oz = Math.sin(ang) * rad;
+      if(Math.abs(ox) > maxX || Math.abs(oz) > maxZ) continue;
+      var ok = true;
+      for(var a = 0; a < appies.length; a++){
+        if(!appies[a].alive) continue;
+        var b = appies[a].parts[0].body.position;
+        var dx = (BASE.x + ox) - b.x;
+        var dz = (BASE.z + oz) - b.z;
+        if(dx * dx + dz * dz < 1.25 * 1.25){ ok = false; break; }
+      }
+      if(ok) return {x:ox, z:oz};
+    }
+    var fallback = Math.min(maxX, 1.2);
+    return {x:(Math.random() * 2 - 1) * fallback, z:(Math.random() * 2 - 1) * Math.min(maxZ, 1.2)};
+  }
+
+  function appieGroupMask(){
+    var all = 0;
+    for(var i = 0; i < appies.length; i++) all |= appies[i].groupBit;
+    return all;
+  }
+
+  function refreshCollisionMasks(){
+    var all = 0;
+    for(var i = 0; i < appies.length; i++) all |= appies[i].groupBit;
+    for(var i = 0; i < appies.length; i++){
+      var mask = 1 | 2 | (all & ~appies[i].groupBit);
+      for(var j = 0; j < appies[i].bodies.length; j++) appies[i].bodies[j].collisionFilterMask = mask;
+    }
+    if(typeof objects !== 'undefined'){
+      for(var k = 0; k < objects.length; k++){
+        if(objects[k].body) objects[k].body.collisionFilterMask = all;
+      }
+    }
+  }
+
+  var initialAppie = createAppie(0, 0);
+  appies.push(initialAppie);
+  setActiveAppie(initialAppie);
+  sleepAll(initialAppie);
+  refreshCollisionMasks();
+
+  function clearToasts(){
+    var box = byId('golaToasts');
+    if(!box) return;
+    while(box.firstChild) box.removeChild(box.firstChild);
+  }
+
+  var restCenter = (1.125 + 1.75 + 1.06 * 2 + 0.375 * 2) / 6;
+  var stats = {flings:0, impacts:0, maxH:0, lastAir:0, currentAir:0, inAir:false, airStart:0, tick:0};
+  var stFling = byId('stFling');
+  var stHigh = byId('stHigh');
+  var stAir = byId('stAir');
+
+  function drawStats(){
+    if(stFling) stFling.textContent = String(stats.flings);
+    if(stImpact) stImpact.textContent = String(stats.impacts);
+    if(stHigh) stHigh.textContent = Math.max(0, stats.maxH).toFixed(1) + 'm';
+    if(stAir) stAir.textContent = (stats.inAir ? stats.currentAir : stats.lastAir).toFixed(1) + 's';
+  }
+
+  var audioCtx = null;
+  var masterGain = null;
+  function initAudio(){
+    if(audioCtx) return;
+    var AC = window.AudioContext || window.webkitAudioContext;
+    if(!AC) return;
+    try{
+      audioCtx = new AC();
+      masterGain = audioCtx.createGain();
+      masterGain.gain.value = settings.sound ? 0.55 : 0;
+      masterGain.connect(audioCtx.destination);
+    initHurt();
+    initShan();
+    }catch(e){
+      audioCtx = null;
+      masterGain = null;
+    }
+  }
+  function applySound(){
+    if(masterGain) masterGain.gain.value = settings.sound ? 0.55 : 0;
+    if(!settings.sound && hurtEls){
+      for(var hi = 0; hi < hurtEls.length; hi++){
+        try{ hurtEls[hi].pause(); }catch(e){}
+      }
+    }
+    if(!settings.sound && shanAudio){
+      try{ shanAudio.pause(); }catch(e){}
+    }
+  }
+  var hurtEls = null;
+  var hurtCursor = 0;
+  var shanshenbuMode = false;
+  var shanAudio = null;
+  var lastShan = 0;
+  function strengthVolume(){
+    var p = Math.max(20, Math.min(1000, Number(settings.power) || 100));
+    if(p <= 100) return 0.15 + 0.6 * ((p - 20) / 80);
+    return 0.75 + 0.25 * ((p - 100) / 900);
+  }
+  function initHurt(){
+    if(hurtEls) return;
+    hurtEls = ['./hurt1.mp3', './hurt2.mp3', './hurt3.mp3'].map(function(src){
+      var a = new Audio(src);
+      a.preload = 'auto';
+      return a;
+    });
+  }
+  function initShan(){
+    if(shanAudio) return;
+    shanAudio = new Audio('./ShanShenBu.mp3');
+    shanAudio.preload = 'auto';
+  }
+  function playHurt(vol){
+    if(!settings.sound || shanshenbuMode) return;
+    if(!hurtEls) initHurt();
+    if(!hurtEls || !hurtEls.length) return;
+    var a = hurtEls[hurtCursor++ % hurtEls.length];
+    try{
+      a.currentTime = 0;
+      a.volume = Math.max(0.02, Math.min(1, vol * strengthVolume()));
+      var pr = a.play();
+      if(pr && pr.catch) pr.catch(function(){});
+    }catch(e){}
+  }
+  function applyShanHit(ap){
+    ap = ap || activeAppie;
+    if(!ap || !ap.alive) return;
+    var ps = ap.parts;
+    var p = Math.min(3.0, powerScale());
+    var ang = Math.random() * Math.PI * 2;
+    var side = (1.2 + Math.random() * 1.8) * p;
+    var up = (2.0 + Math.random() * 1.5) * p;
+    for(var i = 0; i < ps.length; i++){
+      var b = ps[i].body;
+      b.velocity.x += Math.cos(ang) * side + (Math.random() * 2 - 1) * 0.8;
+      b.velocity.y += up + (Math.random() * 2 - 1) * 0.5;
+      b.velocity.z += Math.sin(ang) * side + (Math.random() * 2 - 1) * 0.8;
+      b.angularVelocity.set(
+        (Math.random() * 2 - 1) * 10 * p,
+        (Math.random() * 2 - 1) * 10 * p,
+        (Math.random() * 2 - 1) * 10 * p
+      );
+      b.wakeUp();
+    }
+    addShake(0.06);
+    var t = ps[0].body.position;
+    spawnHitParticles(new THREE.Vector3(t.x, t.y + 0.1, t.z), 4);
+    flashHurt(ap);
+  }
+  function playShanHit(ap){
+    if(!shanshenbuMode) return;
+    var now = performance.now();
+    if(now - lastShan < 220) return;
+    lastShan = now;
+    if(settings.sound){
+      initShan();
+      if(shanAudio){
+        try{
+          shanAudio.currentTime = 0;
+          shanAudio.volume = Math.max(0.05, Math.min(1, 0.25 + 0.75 * strengthVolume()));
+          var pr = shanAudio.play();
+          if(pr && pr.catch) pr.catch(function(){});
+        }catch(e){}
+      }
+    }
+    applyShanHit(ap);
+  }
+  function tone(freq, dur, type, vol, slide){
+    if(!audioCtx || !masterGain || !settings.sound) return;
+    var t = audioCtx.currentTime;
+    var o = audioCtx.createOscillator();
+    var g = audioCtx.createGain();
+    o.type = type || 'square';
+    o.frequency.setValueAtTime(Math.max(30, freq), t);
+    if(slide) o.frequency.exponentialRampToValueAtTime(Math.max(30, slide), t + dur);
+    g.gain.setValueAtTime(Math.max(0.0001, vol), t);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g);
+    g.connect(masterGain);
+    o.start(t);
+    o.stop(t + dur + 0.02);
+  }
+  function sfxClick(){ tone(760, 0.035, 'square', 0.045, 520); }
+
+  var damageTex = new THREE.TextureLoader().load('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAYAAADED76LAAAABGdBTUEAALGPC/xhBQAAAEBJREFUGNNjYACCBAWF/yCMzmaACVy4cOG/g4MDWAJEw9hwBTBBZAxXECwtjVUBSBxuDboiFEl0RVglkRUxkAoA6pU6bjl6zpsAAAAASUVORK5CYII=', function(t){
+    t.magFilter = THREE.NearestFilter;
+    t.minFilter = THREE.NearestFilter;
+    t.generateMipmaps = false;
+    t.colorSpace = THREE.SRGBColorSpace;
+    t.needsUpdate = true;
+  });
+  damageTex.magFilter = THREE.NearestFilter;
+  damageTex.minFilter = THREE.NearestFilter;
+  damageTex.generateMipmaps = false;
+  damageTex.colorSpace = THREE.SRGBColorSpace;
+  var damageMat = new THREE.SpriteMaterial({map:damageTex, color:0xFF5555, transparent:true, depthWrite:false, opacity:1, toneMapped:false});
+  var hitParticles = [];
+  for(var hi = 0; hi < 24; hi++){
+    var hmat = damageMat.clone();
+    var hspr = new THREE.Sprite(hmat);
+    hspr.visible = false;
+    hspr.scale.set(0.22, 0.22, 1);
+    scene.add(hspr);
+    hitParticles.push({mesh:hspr, mat:hmat, vel:new THREE.Vector3(), life:0, maxLife:1});
+  }
+  var hitCursor = 0;
+  function flashHurt(ap){
+    ap = ap || activeAppie;
+    if(!ap || !ap.alive || !ap.skinMat) return;
+    ap.hurtFlashT = 0.5;
+    ap.skinMat.emissive.setHex(0xff0000);
+    ap.skinMat.emissiveIntensity = 0.3;
+  }
+  function spawnHitParticles(pos, strength){
+    var count = Math.min(6, 2 + Math.floor(strength / 4));
+    for(var i = 0; i < count; i++){
+      var d = hitParticles[hitCursor++ % hitParticles.length];
+      d.life = d.maxLife = 0.45 + Math.random() * 0.15;
+      d.mesh.visible = true;
+      d.mesh.position.set(pos.x + (Math.random() * 2 - 1) * 0.13, pos.y + (Math.random() * 2 - 1) * 0.1, pos.z + (Math.random() * 2 - 1) * 0.13);
+      d.mesh.scale.setScalar(0.18 + Math.random() * 0.1);
+      d.mat.rotation = Math.random() * Math.PI * 2;
+      d.mat.opacity = 1;
+      d.vel.set((Math.random() * 2 - 1) * 0.45, 0.55 + Math.random() * 0.55, (Math.random() * 2 - 1) * 0.45);
+    }
+  }
+  function updateHitParticles(dt){
+    for(var i = 0; i < hitParticles.length; i++){
+      var d = hitParticles[i];
+      if(d.life <= 0) continue;
+      d.life -= dt;
+      if(d.life <= 0){
+        d.mesh.visible = false;
+        continue;
+      }
+      d.vel.y -= 0.8 * dt;
+      d.mesh.position.addScaledVector(d.vel, dt);
+      d.mat.opacity = Math.max(0, d.life / d.maxLife);
+    }
+  }
+
+  function addShake(mag){
+    if(!settings.shake) return;
+    shakeMag = Math.max(shakeMag, mag);
+    shakeT = shakeDur;
+  }
+
+  var lastHurt = 0;
+  var lastImpact = 0;
+  var lastDust = 0;
+  function onCollide(e){
+    var impact = 0;
+    try{ impact = Math.abs(e.contact.getImpactVelocityAlongNormal()); }catch(err){}
+    if(impact > 1.0){
+      try{
+        var ta = e.target ? e.target.appie : null;
+        var ba = e.body ? e.body.appie : null;
+        if(ta) wakeAll(ta);
+        else if(e.target && e.target.wakeUp) e.target.wakeUp();
+        if(ba && ba !== ta) wakeAll(ba);
+        else if(e.body && e.body !== e.target && e.body.wakeUp && e.body.type !== CANNON.Body.STATIC) e.body.wakeUp();
+      }catch(werr){}
+    }
+    var now = performance.now();
+    if(impact > 3.0 && now - lastDust > 100){
+      lastDust = now;
+      var p = e.target.position;
+      spawnHitParticles(new THREE.Vector3(p.x, p.y + 0.1, p.z), impact);
+      if(impact > 5.5) addShake(Math.min(0.035, impact * 0.003));
+    }
+    if(impact > 4.2 && now - lastHurt > 150){
+      lastHurt = now;
+      playHurt(0.15 + Math.min(0.6, (impact - 4.2) / 10));
+      flashHurt(e.target.appie);
+    }
+    if(impact > 5.0 && now - lastImpact > 250){
+      lastImpact = now;
+      stats.impacts++;
+      drawStats();
+    }
+  }
+
+  var dragging = false;
+  var dragPart = null;
+  var dragLocal = new CANNON.Vec3();
+  var dragPlane = new THREE.Plane();
+  var dragTarget = new THREE.Vector3();
+  var downX = 0, downY = 0, movedFar = false;
+  var ray = new THREE.Raycaster();
+  var ndc = new THREE.Vector2();
+
+  function setNDC(e){
+    var r = canvas.getBoundingClientRect();
+    ndc.x = ((e.clientX - r.left) / r.width) * 2 - 1;
+    ndc.y = -((e.clientY - r.top) / r.height) * 2 + 1;
+  }
+  function findPart(obj){
+    var n = obj;
+    while(n){
+      for(var a = 0; a < appies.length; a++){
+        var ps = appies[a].parts;
+        for(var i = 0; i < ps.length; i++){
+          if(ps[i].group === n) return ps[i];
+        }
+      }
+      n = n.parent;
+    }
+    return null;
+  }
+
+  var looking = false;
+  var lookLastX = 0, lookLastY = 0;
+  var LOOK_SENS = 0.0034;
+
+  function startLook(e){
+    if(followCam) return;
+    looking = true;
+    lookLastX = e.clientX;
+    lookLastY = e.clientY;
+    try{ canvas.setPointerCapture(e.pointerId); }catch(err){}
+    canvas.style.cursor = 'grabbing';
+    e.preventDefault();
+  }
+  function stopLook(e){
+    looking = false;
+    canvas.style.cursor = shanshenbuMode ? 'not-allowed' : 'grab';
+    try{ canvas.releasePointerCapture(e.pointerId); }catch(err){}
+  }
+  function endObjectDrag(e){
+    if(!draggingObject) return;
+    draggingObject = null;
+    canvas.style.cursor = shanshenbuMode ? 'not-allowed' : 'grab';
+    try{ canvas.releasePointerCapture(e.pointerId); }catch(err){}
+  }
+
+  canvas.addEventListener('pointerdown', function(e){
+    initAudio();
+    if(e.pointerType === 'mouse' && e.button === 2){ startLook(e); return; }
+    if(e.pointerType === 'mouse' && e.button !== 0) return;
+    setNDC(e);
+    ray.setFromCamera(ndc, camera);
+    downX = e.clientX;
+    downY = e.clientY;
+    movedFar = false;
+    if(!editMode){
+      var appieHits = ray.intersectObjects(allPartGroups(), true);
+      if(appieHits.length){
+        var appiePart = findPart(appieHits[0].object);
+        if(appiePart){
+          setActiveAppie(appiePart.appie);
+          if(selected) deselectObject();
+          if(shanshenbuMode){
+            playShanHit(appiePart.appie);
+            e.preventDefault();
+            return;
+          }
+          dragPart = appiePart;
+          dragging = true;
+          wakeAll(appiePart.appie);
+          var anormal = camera.getWorldDirection(new THREE.Vector3()).negate();
+          dragPlane.setFromNormalAndCoplanarPoint(anormal, appieHits[0].point);
+          dragTarget.copy(appieHits[0].point);
+          dragPart.body.pointToLocalFrame(new CANNON.Vec3(appieHits[0].point.x, appieHits[0].point.y, appieHits[0].point.z), dragLocal);
+          try{ canvas.setPointerCapture(e.pointerId); }catch(err){}
+          canvas.style.cursor = 'grabbing';
+          e.preventDefault();
+          return;
+        }
+      }
+    }
+    if(transformControls && transformControls.enabled && ray.intersectObject(transformControls, true).length > 0) return;
+    var sourceObjects = objects.filter(function(o){ return !(wallPriority && o.type === 'photo'); });
+    var targets = sourceObjects.map(function(o){ return o.group; });
+    var hit = ray.intersectObjects(targets, true);
+    if(hit.length){
+      var obj = findObject(hit[0].object);
+      if(obj){
+        selectObject(obj);
+        pushHistory();
+        draggingObject = obj;
+        var odir = new THREE.Vector3();
+        camera.getWorldDirection(odir);
+        objectDragPlane.setFromNormalAndCoplanarPoint(odir, hit[0].point);
+        objectDragOffset.copy(obj.group.position).sub(hit[0].point);
+        try{ canvas.setPointerCapture(e.pointerId); }catch(err){}
+        canvas.style.cursor = 'grabbing';
+        e.preventDefault();
+        return;
+      }
+    }
+    startLook(e);
+  });
+
+  canvas.addEventListener('pointermove', function(e){
+    if(looking){
+      camYaw -= (e.clientX - lookLastX) * LOOK_SENS;
+      camPitch -= (e.clientY - lookLastY) * LOOK_SENS;
+      camPitch = Math.max(-1.45, Math.min(1.45, camPitch));
+      lookLastX = e.clientX;
+      lookLastY = e.clientY;
+      applyCameraRotation();
+      return;
+    }
+    if(draggingObject){
+      setNDC(e);
+      ray.setFromCamera(ndc, camera);
+      var op = new THREE.Vector3();
+      if(ray.ray.intersectPlane(objectDragPlane, op)){
+        op.add(objectDragOffset);
+        var oxLim = Math.max(18, BASE.width / 2 + 6);
+        var ozLim = Math.max(18, BASE.depth / 2 + 6);
+        op.x = Math.max(-oxLim, Math.min(oxLim, op.x));
+        op.y = Math.max(0.15, Math.min(24, op.y));
+        op.z = Math.max(-ozLim, Math.min(ozLim, op.z));
+        draggingObject.group.position.copy(op);
+        if(draggingObject.body){
+          draggingObject.body.position.set(op.x, op.y, op.z);
+          draggingObject.body.aabbNeedsUpdate = true;
+          draggingObject.body.updateAABB();
+        }
+        if(selected === draggingObject){
+          if(editX) editX.value = op.x.toFixed(2);
+          if(editY) editY.value = op.y.toFixed(2);
+          if(editZ) editZ.value = op.z.toFixed(2);
+          if(selected.type !== 'wall' && selected.type !== 'base'){
+            selectionHelper.setFromObject(selected.group);
+          }
+        }
+      }
+      return;
+    }
+    if(!dragging) return;
+    if(Math.hypot(e.clientX - downX, e.clientY - downY) > 4) movedFar = true;
+    setNDC(e);
+    ray.setFromCamera(ndc, camera);
+    var p = new THREE.Vector3();
+    if(ray.ray.intersectPlane(dragPlane, p)){
+      p.x = Math.max(BASE.x - BASE.width / 2, Math.min(BASE.x + BASE.width / 2, p.x));
+      p.y = Math.max(0.22, Math.min(8, p.y));
+      p.z = Math.max(BASE.z - BASE.depth / 2, Math.min(BASE.z + BASE.depth / 2, p.z));
+      dragTarget.copy(p);
+    }
+  });
+
+  function endDrag(e, cancelled){
+    if(!dragging) return;
+    var body = dragPart ? dragPart.body : null;
+    dragging = false;
+    canvas.style.cursor = shanshenbuMode ? 'not-allowed' : 'grab';
+    try{ canvas.releasePointerCapture(e.pointerId); }catch(err){}
+    if(body){
+      var sp = body.velocity.length();
+      if(sp > TUNE.maxSpeed) body.velocity.scale(TUNE.maxSpeed / sp, body.velocity);
+      if(!cancelled && movedFar){
+        registerThrow();
+        if(sp > 3) playHurt(0.45 + Math.min(0.25, sp / 30));
+      }else if(!cancelled){
+        wakeAll();
+        body.wakeUp();
+        body.applyImpulse(new CANNON.Vec3((Math.random() * 2 - 1) * 0.35, 0.28 + Math.random() * 0.4, (Math.random() * 2 - 1) * 0.35), new CANNON.Vec3(0, 0, 0));
+        sfxClick();
+      }
+    }
+    dragPart = null;
+  }
+  canvas.addEventListener('pointerup', function(e){
+    if(looking){ stopLook(e); return; }
+    if(draggingObject){ endObjectDrag(e); return; }
+    endDrag(e, false);
+  });
+  canvas.addEventListener('pointercancel', function(e){
+    if(looking){ stopLook(e); return; }
+    if(draggingObject){ endObjectDrag(e); return; }
+    endDrag(e, true);
+  });
+  canvas.addEventListener('contextmenu', function(e){ e.preventDefault(); });
+  canvas.addEventListener('wheel', function(e){
+    e.preventDefault();
+    var cp = Math.cos(camPitch);
+    var dx = Math.sin(camYaw) * cp;
+    var dy = Math.sin(camPitch);
+    var dz = Math.cos(camYaw) * cp;
+    var step = (e.deltaY > 0 ? -1 : 1) * 0.9;
+    camera.position.x = Math.max(-CAM_LIMIT, Math.min(CAM_LIMIT, camera.position.x + dx * step));
+    camera.position.z = Math.max(-CAM_LIMIT, Math.min(CAM_LIMIT, camera.position.z + dz * step));
+    camera.position.y = Math.max(CAM_MIN_Y, Math.min(CAM_MAX_Y, camera.position.y + dy * step));
+    applyCameraRotation();
+  }, {passive:false});
+
+  function applyDrag(){
+    if(!dragPart) return;
+    var body = dragPart.body;
+    var strength = powerScale();
+    var k = TUNE.dragK * strength;
+    var damp = TUNE.dragDamp * Math.sqrt(strength);
+    var anchor = new CANNON.Vec3();
+    body.vectorToWorldFrame(dragLocal, anchor);
+    var px = body.position.x + anchor.x;
+    var py = body.position.y + anchor.y;
+    var pz = body.position.z + anchor.z;
+    var fx = ((dragTarget.x - px) * k - body.velocity.x * damp) * body.mass;
+    var fy = ((dragTarget.y - py) * k - body.velocity.y * damp) * body.mass;
+    var fz = ((dragTarget.z - pz) * k - body.velocity.z * damp) * body.mass;
+    var maxF = TUNE.dragMax * strength * body.mass;
+    var fl = Math.sqrt(fx * fx + fy * fy + fz * fz);
+    if(fl > maxF){
+      var k = maxF / fl;
+      fx *= k;
+      fy *= k;
+      fz *= k;
+    }
+    body.wakeUp();
+    body.applyForce(new CANNON.Vec3(fx, fy, fz), anchor);
+  }
+
+  function powerScale(){
+    return Math.max(0.2, Number(settings.power || 100) / 100);
+  }
+
+  function registerThrow(){
+    stats.flings++;
+    if(stats.flings === 10) toast('10회 던짐. 개발자가 놀라고 있습니다.', 'gola-toast--gold');
+    else if(stats.flings === 50) toast('50회. 이제 그만 던지세요.', 'gola-toast--red');
+    drawStats();
+  }
+
+  function fling(){
+    var ap = activeAppie;
+    if(!ap || !ap.alive){
+      ap = firstAliveAppie();
+      if(!ap){ toast('애피가 없습니다. 스폰으로 추가하세요.', 'gola-toast--red'); return; }
+      setActiveAppie(ap);
+    }
+    clearTutorial();
+    clearToasts();
+    var p = Math.sqrt(powerScale());
+    var camRight = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion);
+    var ang = Math.atan2(camRight.z, camRight.x) + (Math.random() * 2 - 1) * 0.9;
+    var side = (TUNE.flingSide[0] + Math.random() * (TUNE.flingSide[1] - TUNE.flingSide[0])) * p;
+    var up = (TUNE.flingUp[0] + Math.random() * (TUNE.flingUp[1] - TUNE.flingUp[0])) * p;
+    var ps = ap.parts;
+    for(var i = 0; i < ps.length; i++){
+      var b = ps[i].body;
+      b.velocity.x += Math.cos(ang) * side + (Math.random() * 2 - 1) * 0.7;
+      b.velocity.y += up + (Math.random() * 2 - 1) * 0.45;
+      b.velocity.z += Math.sin(ang) * side + (Math.random() * 2 - 1) * 0.7;
+      b.angularVelocity.set(
+        (Math.random() * 2 - 1) * TUNE.flingSpin * p,
+        (Math.random() * 2 - 1) * TUNE.flingSpin * p,
+        (Math.random() * 2 - 1) * TUNE.flingSpin * p
+      );
+      b.wakeUp();
+    }
+    playHurt(0.55 + Math.random() * 0.2);
+    registerThrow();
+  }
+
+  function spin(){
+    var ap = activeAppie;
+    if(!ap || !ap.alive){
+      ap = firstAliveAppie();
+      if(!ap){ toast('애피가 없습니다. 스폰으로 추가하세요.', 'gola-toast--red'); return; }
+      setActiveAppie(ap);
+    }
+    clearTutorial();
+    clearToasts();
+    var p = Math.sqrt(powerScale());
+    var ps = ap.parts;
+    for(var i = 0; i < ps.length; i++){
+      var b = ps[i].body;
+      b.velocity.y += TUNE.spin * 0.42 * p;
+      b.angularVelocity.set(
+        (Math.random() * 2 - 1) * TUNE.spin * p,
+        (Math.random() * 2 - 1) * TUNE.spin * p,
+        (Math.random() * 2 - 1) * TUNE.spin * p
+      );
+      b.wakeUp();
+    }
+    playHurt(0.6);
+    registerThrow();
+  }
+
+  function sampleBodies(){
+    if(!activeAppie || !activeAppie.alive){
+      return {center:new THREE.Vector3(BASE.x, BASE.top, BASE.z), minY:BASE.top, speed:0};
+    }
+    var ps = activeAppie.parts;
+    var minY = Infinity;
+    var sumX = 0, sumY = 0, sumZ = 0, sumV = 0;
+    for(var i = 0; i < ps.length; i++){
+      var b = ps[i].body;
+      b.updateAABB();
+      if(b.aabb.lowerBound.y < minY) minY = b.aabb.lowerBound.y;
+      sumX += b.position.x;
+      sumY += b.position.y;
+      sumZ += b.position.z;
+      sumV += b.velocity.length();
+    }
+    return {
+      center:new THREE.Vector3(sumX / ps.length, sumY / ps.length, sumZ / ps.length),
+      minY:minY,
+      speed:sumV / ps.length
+    };
+  }
+
+  function updateStats(t, dt){
+    if(!activeAppie || !activeAppie.alive){
+      var next = firstAliveAppie();
+      if(next) setActiveAppie(next);
+      else return;
+    }
+    var sample = sampleBodies();
+    var h = sample.center.y - BASE.top - restCenter;
+    if(h > stats.maxH) stats.maxH = h;
+    if(!stats.inAir && sample.minY > 0.06 && sample.speed > 0.55){
+      stats.inAir = true;
+      stats.airStart = t;
+      stats.currentAir = 0;
+    }
+    if(stats.inAir){
+      stats.currentAir = t - stats.airStart;
+      if(sample.minY < 0.035 && sample.speed < 0.9){
+        stats.inAir = false;
+        if(stats.currentAir > stats.lastAir) stats.lastAir = stats.currentAir;
+      }
+    }
+    stats.tick += dt;
+    if(stats.tick > 0.1){
+      stats.tick = 0;
+      drawStats();
+    }
+  }
+
+  function spawnAppie(){
+    var aliveCount = 0;
+    for(var i = 0; i < appies.length; i++) if(appies[i].alive) aliveCount++;
+    var off = freeSpawnOffset();
+    var ap = createAppie(off.x, off.z);
+    appies.push(ap);
+    setActiveAppie(ap);
+    sleepAll(ap);
+    refreshCollisionMasks();
+    drawStats();
+    toast('애피 스폰 (' + (aliveCount + 1) + ')', 'gola-toast--gold');
+  }
+
+  function activeCenter(){
+    if(!activeAppie || !activeAppie.alive) return new THREE.Vector3(BASE.x, BASE.top + 1.0, BASE.z);
+    var c = new THREE.Vector3();
+    for(var i = 0; i < activeAppie.parts.length; i++){
+      c.x += activeAppie.parts[i].body.position.x / activeAppie.parts.length;
+      c.y += activeAppie.parts[i].body.position.y / activeAppie.parts.length;
+      c.z += activeAppie.parts[i].body.position.z / activeAppie.parts.length;
+    }
+    return c;
+  }
+
+  function syncYawPitchFromCamera(){
+    var d = new THREE.Vector3();
+    camera.getWorldDirection(d);
+    camYaw = Math.atan2(d.x, d.z);
+    camPitch = Math.asin(Math.max(-1, Math.min(1, d.y)));
+  }
+
+  function setFollowCam(on){
+    followCam = !!on;
+    if(followCam){
+      followOffset.copy(camera.position).sub(activeCenter());
+    }else{
+      syncYawPitchFromCamera();
+    }
+    clearCameraKeys();
+  }
+
+  function applyCameraRotation(){
+    var cp = Math.cos(camPitch);
+    var dx = Math.sin(camYaw) * cp;
+    var dy = Math.sin(camPitch);
+    var dz = Math.cos(camYaw) * cp;
+    camera.lookAt(camera.position.x + dx, camera.position.y + dy, camera.position.z + dz);
+  }
+
+  function initCamera(){
+    var w = window.innerWidth;
+    var h = window.innerHeight;
+    var portrait = h > w * 1.12;
+    var tx, ty, tz;
+    if(portrait){
+      camera.position.set(4.9, 2.5, 6.9);
+      tx = 0; ty = 1.05; tz = 0;
+    }else{
+      camera.position.set(4.5, 2.0, 5.75);
+      tx = -0.35; ty = 0.98; tz = -0.35;
+    }
+    var dx = tx - camera.position.x;
+    var dy = ty - camera.position.y;
+    var dz = tz - camera.position.z;
+    camYaw = Math.atan2(dx, dz);
+    camPitch = Math.asin(dy / Math.sqrt(dx * dx + dy * dy + dz * dz));
+    applyCameraRotation();
+  }
+
+  function updateCamera(dt){
+    if(followCam){
+      var fc = activeCenter();
+      camera.position.copy(fc).add(followOffset);
+      if(shakeT > 0){
+        var sk = shakeT / shakeDur;
+        camera.position.x += (Math.random() * 2 - 1) * shakeMag * sk;
+        camera.position.y += (Math.random() * 2 - 1) * shakeMag * sk;
+        camera.position.z += (Math.random() * 2 - 1) * shakeMag * sk;
+        shakeT = Math.max(0, shakeT - dt);
+        if(shakeT === 0) shakeMag = 0;
+      }
+      camera.lookAt(fc.x, fc.y, fc.z);
+      return;
+    }
+    var cp = Math.cos(camPitch);
+    var fx = Math.sin(camYaw) * cp;
+    var fy = Math.sin(camPitch);
+    var fz = Math.cos(camYaw) * cp;
+    var rx = -Math.cos(camYaw);
+    var rz = Math.sin(camYaw);
+    var mx = 0, mz = 0, my = 0;
+    if(keys.w){ mx += fx; my += fy; mz += fz; }
+    if(keys.s){ mx -= fx; my -= fy; mz -= fz; }
+    if(keys.d){ mx += rx; mz += rz; }
+    if(keys.a){ mx -= rx; mz -= rz; }
+    var len = Math.sqrt(mx * mx + mz * mz + my * my);
+    if(len > 0){
+      var step = CAM_SPEED * (keys.shift ? 2.2 : 1) * dt / len;
+      camera.position.x = Math.max(-CAM_LIMIT, Math.min(CAM_LIMIT, camera.position.x + mx * step));
+      camera.position.z = Math.max(-CAM_LIMIT, Math.min(CAM_LIMIT, camera.position.z + mz * step));
+      camera.position.y = Math.max(CAM_MIN_Y, Math.min(CAM_MAX_Y, camera.position.y + my * step));
+    }
+    applyCameraRotation();
+    if(shakeT > 0){
+      var k = shakeT / shakeDur;
+      camera.position.x += (Math.random() * 2 - 1) * shakeMag * k;
+      camera.position.y += (Math.random() * 2 - 1) * shakeMag * k;
+      camera.position.z += (Math.random() * 2 - 1) * shakeMag * k;
+      shakeT = Math.max(0, shakeT - dt);
+      if(shakeT === 0) shakeMag = 0;
+    }
+  }
+
+  function fit(){
+    var w = window.innerWidth;
+    var h = window.innerHeight;
+    if(!w || !h) return;
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    renderer.setSize(w, h, false);
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+  }
+  window.addEventListener('resize', fit);
+  window.addEventListener('orientationchange', fit);
+  initCamera();
+  fit();
+  syncAllMeshes();
+  sleepAll();
+
+  function applyShadow(){
+    var on = !!settings.shadows;
+    renderer.shadowMap.enabled = on;
+    sun.castShadow = on;
+    if(on) renderer.shadowMap.needsUpdate = true;
+  }
+  function syncToggle(id){
+    var cb = byId(id);
+    var label = document.querySelector('[data-gola-for="' + id + '"]');
+    if(!cb || !label) return;
+    var parts = (label.getAttribute('data-gola-text') || '').split('|');
+    label.textContent = cb.checked ? parts[0] : (parts[1] !== undefined ? parts[1] : parts[0]);
+  }
+  function bootToggle(id, key){
+    var cb = byId(id);
+    if(!cb) return;
+    cb.checked = !!settings[key];
+    syncToggle(id);
+    cb.addEventListener('change', function(){
+      settings[key] = cb.checked;
+      saveSettings();
+      syncToggle(id);
+    });
+  }
+
+  bootToggle('optShake', 'shake');
+  bootToggle('optShadow', 'shadows');
+  bootToggle('optSound', 'sound');
+  bootToggle('optToast', 'toast');
+  applyShadow();
+
+  byId('optShadow').addEventListener('change', function(){
+    applyShadow();
+    if(!menuVisible()) toast('그림자 : ' + (this.checked ? '켜짐' : '꺼짐'), 'gola-toast--gold');
+  });
+  byId('optSound').addEventListener('change', function(){
+    if(this.checked) initAudio();
+    applySound();
+    if(!menuVisible()) toast('효과음 : ' + (this.checked ? '켜짐' : '꺼짐'), 'gola-toast--gold');
+    if(this.checked) sfxClick();
+  });
+  byId('optShake').addEventListener('change', function(){
+    if(!menuVisible()) toast('화면 흔들림 : ' + (this.checked ? '켜짐' : '꺼짐'), 'gola-toast--gold');
+  });
+
+  var followToggle = byId('optFollow');
+  if(followToggle){
+    followToggle.addEventListener('change', function(){
+      setFollowCam(this.checked);
+      if(!menuVisible()) toast('카메라 추적 : ' + (this.checked ? '켜짐' : '꺼짐'), 'gola-toast--gold');
+    });
+  }
+  var shanshenToggle = byId('optShanshen');
+  if(shanshenToggle){
+    shanshenToggle.checked = false;
+    syncToggle('optShanshen');
+    shanshenToggle.addEventListener('change', function(){
+      shanshenbuMode = this.checked;
+      canvas.style.cursor = shanshenbuMode ? 'not-allowed' : 'grab';
+      if(shanshenbuMode){
+        if(editMode){
+          editMode = false;
+          var oe = byId('optEditMode');
+          if(oe) oe.checked = false;
+          if(typeof syncToggle === 'function') syncToggle('optEditMode');
+        }
+        dragging = false;
+        dragPart = null;
+        initShan();
+        playShanHit();
+      }else if(shanAudio){
+        try{ shanAudio.pause(); shanAudio.currentTime = 0; }catch(e){}
+      }
+      if(!menuVisible()) toast(shanshenbuMode ? '샨셴부 : 켜짐' : '샨셴부 : 꺼짐', 'gola-toast--gold');
+    });
+  }
+
+  var powerSlider = byId('powerMenu');
+  function powerVisual(){
+    if(!powerSlider) return;
+    powerSlider.value = settings.power;
+    var p = (Number(settings.power) - 20) / 980;
+    powerSlider.style.setProperty('--p', Math.max(0, Math.min(1, p)).toFixed(4));
+    if(byId('powerMenuVal')) byId('powerMenuVal').textContent = settings.power + '%';
+  }
+  function setPower(v){
+    settings.power = Math.max(20, Math.min(1000, Math.round(Number(v) / 10) * 10));
+    saveSettings();
+    powerVisual();
+  }
+  if(powerSlider){
+    powerSlider.addEventListener('input', function(){ setPower(this.value); });
+    powerSlider.addEventListener('change', function(){ toast('강도 : ' + settings.power + '%', 'gola-toast--yellow'); });
+  }
+  powerVisual();
+
+  var menu = byId('menu');
+  function menuVisible(){
+    return !!(menu && menu.classList.contains('open'));
+  }
+  var menuBtn = byId('menuBtn');
+  function openMenu(){
+    clearTutorial();
+    clearToasts();
+    clearCameraKeys();
+    if(menu) menu.classList.add('open');
+    sfxClick();
+    setTimeout(function(){ try{ byId('menuClose').focus({preventScroll:true}); }catch(e){} }, 50);
+  }
+  function closeMenu(){
+    if(menu) menu.classList.remove('open');
+    sfxClick();
+    try{ menuBtn.focus({preventScroll:true}); }catch(e){}
+  }
+  if(menuBtn) menuBtn.addEventListener('click', openMenu);
+  if(byId('menuClose')) byId('menuClose').addEventListener('click', closeMenu);
+
+  var tutorialTimers = [];
+  function clearTutorial(){
+    for(var i = 0; i < tutorialTimers.length; i++) clearTimeout(tutorialTimers[i]);
+    tutorialTimers = [];
+  }
+  function playTutorial(force){
+    clearTutorial();
+    if(!force && settings.seenTutorial) return;
+    settings.seenTutorial = true;
+    saveSettings();
+    tutorialTimers.push(setTimeout(function(){
+      clearToasts();
+      toast('애피를 잡고 던져보세요.', 'gola-toast--yellow', !!force);
+    }, 220));
+    tutorialTimers.push(setTimeout(function(){
+      clearToasts();
+      toast('[WASD] 이동 / [우클릭] 시점 / [TAB] 메뉴', 'gola-toast--yellow', !!force);
+    }, 2420));
+    tutorialTimers.push(setTimeout(function(){
+      clearToasts();
+      toast('[드래그] : 잡기 / [날리기] : 던지기', 'gola-toast--gold', !!force);
+    }, 4620));
+  }
+  byId('fling').addEventListener('click', fling);
+  byId('spin').addEventListener('click', spin);
+  byId('reset').addEventListener('click', function(){ spawnAppie(); });
+
+  document.addEventListener('pointerdown', function(e){
+    initAudio();
+    if(settings.sound && e.target && e.target.closest && e.target.closest('button,.gola-switch,.gola-arrow,.gola-slider')) sfxClick();
+  }, true);
+
+  function cameraKey(e, down){
+    var code = e.code || '';
+    var map = {KeyW:'w', KeyA:'a', KeyS:'s', KeyD:'d'};
+    if(map[code]){
+      keys[map[code]] = down;
+      return true;
+    }
+    if(code === 'ShiftLeft' || code === 'ShiftRight'){
+      keys.shift = down;
+      return true;
+    }
+    var k = (e.key || '').toLowerCase();
+    if(k === 'w' || k === 'a' || k === 's' || k === 'd'){
+      keys[k] = down;
+      return true;
+    }
+    if(e.key === 'Shift'){
+      keys.shift = down;
+      return true;
+    }
+    return false;
+  }
+  function clearCameraKeys(){
+    keys.w = keys.a = keys.s = keys.d = keys.shift = false;
+  }
+
+  document.addEventListener('keydown', function(e){
+    var tag = (e.target && e.target.tagName || '').toLowerCase();
+    if(e.key === 'Tab'){
+      e.preventDefault();
+      if(menuVisible()) closeMenu();
+      else openMenu();
+      return;
+    }
+    if(e.key === 'Escape'){
+      if(menuVisible()) closeMenu();
+      else if(selected) deselectObject();
+      return;
+    }
+    if((e.ctrlKey || e.metaKey) && (e.code === 'KeyZ' || e.code === 'KeyY')){
+      if(tag === 'input' || tag === 'textarea' || tag === 'select') return;
+      e.preventDefault();
+      if(e.code === 'KeyY' || e.shiftKey) redoScene();
+      else undoScene();
+      return;
+    }
+    if(menuVisible()) return;
+    if(cameraKey(e, true)) return;
+    if(tag === 'input' || tag === 'textarea' || tag === 'select') return;
+    if(e.code === 'KeyR' || e.key === 'r' || e.key === 'R'){ spawnAppie(); return; }
+    if(e.code === 'KeyF' || e.key === 'f' || e.key === 'F'){ fling(); return; }
+    if(e.code === 'KeyM' || e.key === 'm' || e.key === 'M'){
+      settings.sound = !settings.sound;
+      var sc = byId('optSound');
+      if(sc) sc.checked = settings.sound;
+      syncToggle('optSound');
+      saveSettings();
+      initAudio();
+      applySound();
+      if(!menuVisible()) toast('효과음 : ' + (settings.sound ? '켜짐' : '꺼짐'), 'gola-toast--gold');
+    }
+  });
+
+  document.addEventListener('keyup', function(e){
+    cameraKey(e, false);
+  });
+
+  window.addEventListener('blur', clearCameraKeys);
+
+  var lastT = performance.now();
+  var firstRendered = false;
+  var loadingHidden = false;
+  function loop(){
+    requestAnimationFrame(loop);
+    var now = performance.now();
+    var dt = Math.min(0.05, Math.max(0.001, (now - lastT) / 1000));
+    lastT = now;
+    var t = now / 1000;
+    if(dragging) applyDrag();
+    world.step(1 / 60, dt, 4);
+    syncAllMeshes();
+    updateStats(t, dt);
+    updateHitParticles(dt);
+    for(var fi = 0; fi < appies.length; fi++){
+      var fa = appies[fi];
+      if(fa.hurtFlashT > 0){
+        fa.hurtFlashT = Math.max(0, fa.hurtFlashT - dt);
+        fa.skinMat.emissiveIntensity = 0.3 * (fa.hurtFlashT / 0.5);
+        if(fa.hurtFlashT === 0) fa.skinMat.emissive.setHex(0);
+      }
+    }
+    updateCamera(dt);
+    renderer.render(scene, camera);
+    firstRendered = true;
+    if(!loadingHidden && firstRendered && texReady){
+      loadingHidden = true;
+      setLoad(1, '완료');
+      setTimeout(function(){ if(loadingEl) loadingEl.classList.add('hidden'); }, 180);
+      playTutorial(false);
+    }
+  }
+
+  document.addEventListener('visibilitychange', function(){
+    if(document.hidden) clearCameraKeys();
+    else lastT = performance.now();
+  });
+
+  setLoad(0.86, '씬 구성 중');
+  drawStats();
+  loop();
+
+  var objects = [];
+  var selected = null;
+  var baseObj = null;
+  var draggingObject = null;
+  var editMode = false;
+  var wallPriority = false;
+  var objectDragPlane = new THREE.Plane();
+  var objectDragOffset = new THREE.Vector3();
+  var selectionHelper = new THREE.BoxHelper(new THREE.Object3D(), 0xFF8000);
+  selectionHelper.visible = false;
+  selectionHelper.material.depthTest = false;
+  selectionHelper.material.transparent = true;
+  selectionHelper.renderOrder = 999;
+  scene.add(selectionHelper);
+
+  var editorEl = byId('editor');
+  var editorTitle = byId('editorTitle');
+  var editorSub = byId('editorSub');
+  var editorClose = byId('editorClose');
+  var editW = byId('editW');
+  var editH = byId('editH');
+  var editD = byId('editD');
+  var editX = byId('editX');
+  var editY = byId('editY');
+  var editZ = byId('editZ');
+  var editRX = byId('editRX');
+  var editRY = byId('editRY');
+  var editRZ = byId('editRZ');
+  var editO = byId('editO');
+  var editCollide = byId('editCollide');
+  var objApplyBtn = byId('objApply');
+  var undoBtn = byId('undoBtn');
+  var redoBtn = byId('redoBtn');
+  var photoInput = byId('photoInput');
+  var addPhotoBtn = byId('addPhoto');
+  var addBlockBtn = byId('addBlock');
+  var addWallBtn = byId('addWall');
+  var editBaseBtn = byId('editBase');
+  var objDupBtn = byId('objDup');
+  var objDelBtn = byId('objDel');
+  var optEditMode = byId('optEditMode');
+  var optWallFirst = byId('optWallFirst');
+  var gizmoButtons = document.querySelectorAll('.gizmo-mode');
+  var transformControls = null;
+  var gizmoMode = 'translate';
+
+  baseObj = {type:'base', group:baseBox, width:BASE.width, depth:BASE.depth, thickness:BASE.thickness, top:BASE.top, x:BASE.x, z:BASE.z, body:baseBody, collide:true, opacity:1, rotX:0, rotY:0, rotZ:0};
+
+  var wallBaseTex = (function(){
+    var c = document.createElement('canvas');
+    c.width = 64;
+    c.height = 64;
+    var x = c.getContext('2d');
+    x.clearRect(0, 0, 64, 64);
+    x.strokeStyle = 'rgba(0,0,0,0.55)';
+    x.lineWidth = 2;
+    x.setLineDash([7, 7]);
+    for(var y = 8; y < 64; y += 16){
+      x.beginPath();
+      x.moveTo(0, y);
+      x.lineTo(64, y);
+      x.stroke();
+    }
+    var t = new THREE.CanvasTexture(c);
+    t.wrapS = t.wrapT = THREE.RepeatWrapping;
+    t.colorSpace = THREE.SRGBColorSpace;
+    t.needsUpdate = true;
+    return t;
+  })();
+
+  function findObject(obj){
+    var n = obj;
+    while(n){
+      for(var i = 0; i < objects.length; i++){
+        if(objects[i].group === n) return objects[i];
+      }
+      n = n.parent;
+    }
+    return null;
+  }
+
+  function spawnPos(){
+    var dir = new THREE.Vector3();
+    camera.getWorldDirection(dir);
+    var pos = camera.position.clone().addScaledVector(dir, 5.2);
+    var sxLim = Math.max(8, Math.min(30, BASE.width / 2 - 1));
+    var szLim = Math.max(8, Math.min(30, BASE.depth / 2 - 1));
+    pos.x = Math.max(-sxLim, Math.min(sxLim, pos.x));
+    pos.y = Math.max(0.6, Math.min(10, pos.y));
+    pos.z = Math.max(-szLim, Math.min(szLim, pos.z));
+    return pos;
+  }
+
+  function faceCameraYaw(pos){
+    return Math.atan2(camera.position.x - pos.x, camera.position.z - pos.z) * 180 / Math.PI;
+  }
+
+  function createObjectBody(obj){
+    if(obj.type !== 'photo' && obj.type !== 'block') return null;
+    var hz = obj.type === 'photo' ? 0.03 : Math.max(0.1, (obj.depth || 1) / 2);
+    var body = new CANNON.Body({mass:0, material:propMat, collisionFilterGroup:2, collisionFilterMask:appieGroupMask()});
+    body.addShape(new CANNON.Box(new CANNON.Vec3(Math.max(0.1, obj.width / 2), Math.max(0.1, obj.height / 2), hz)));
+    body.position.set(obj.group.position.x, obj.group.position.y, obj.group.position.z);
+    body.quaternion.setFromEuler(obj.group.rotation.x, obj.group.rotation.y, obj.group.rotation.z);
+    world.addBody(body);
+    obj.body = body;
+    obj.collide = true;
+    return body;
+  }
+
+  function syncObjectBody(obj){
+    if(!obj.body) return;
+    var hz = obj.type === 'photo' ? 0.03 : Math.max(0.1, (obj.depth || 1) / 2);
+    var shape = obj.body.shapes[0];
+    shape.halfExtents.set(Math.max(0.1, obj.width / 2), Math.max(0.1, obj.height / 2), hz);
+    shape.updateConvexPolyhedronRepresentation();
+    obj.body.updateBoundingRadius();
+    obj.body.position.set(obj.group.position.x, obj.group.position.y, obj.group.position.z);
+    obj.body.quaternion.setFromEuler(obj.group.rotation.x, obj.group.rotation.y, obj.group.rotation.z);
+    obj.body.aabbNeedsUpdate = true;
+    obj.body.updateAABB();
+  }
+
+  function makePhoto(texture, name, width, height, opacity, rotation, position){
+    var group = new THREE.Group();
+    var imageMat = new THREE.MeshBasicMaterial({map:texture, transparent:true, opacity:opacity, side:THREE.FrontSide, toneMapped:false, depthWrite:false});
+    var plane = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), imageMat);
+    plane.position.z = 0.021;
+    plane.castShadow = true;
+    group.add(plane);
+    var backMat = new THREE.MeshBasicMaterial({color:0x000000, transparent:true, opacity:opacity, side:THREE.DoubleSide, depthWrite:false});
+    var back = new THREE.Mesh(new THREE.PlaneGeometry(1.1, 1.1), backMat);
+    back.position.z = -0.008;
+    back.castShadow = true;
+    group.add(back);
+    var frameMat = new THREE.MeshBasicMaterial({color:0x000000, transparent:true, opacity:opacity, depthWrite:false});
+    var t = 0.05;
+    function bar(x, y, w, h){
+      var b = new THREE.Mesh(new THREE.BoxGeometry(w, h, 0.04), frameMat);
+      b.position.set(x, y, 0);
+      b.castShadow = true;
+      group.add(b);
+    }
+    bar(0, 0.525, 1.1, t);
+    bar(0, -0.525, 1.1, t);
+    bar(-0.525, 0, t, 1.1);
+    bar(0.525, 0, t, 1.1);
+    group.scale.set(width, height, 1);
+    group.position.copy(position);
+    group.rotation.y = rotation * Math.PI / 180;
+    scene.add(group);
+    var obj = {type:'photo', group:group, plane:plane, imageMat:imageMat, backMat:backMat, frameMat:frameMat, texture:texture, name:name, width:width, height:height, depth:0, opacity:opacity, rotX:0, rotY:rotation, rotZ:0, collide:true};
+    objects.push(obj);
+    createObjectBody(obj);
+    return obj;
+  }
+
+  function makeBlock(width, height, depth, opacity, rotation, position){
+    var group = new THREE.Group();
+    var mat = new THREE.MeshLambertMaterial({color:0xffffff, transparent:true, opacity:opacity, depthWrite:false, side:THREE.DoubleSide});
+    var cube = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), mat);
+    var edgeMat = new THREE.LineBasicMaterial({color:0x000000});
+    var edges = new THREE.LineSegments(new THREE.EdgesGeometry(cube.geometry), edgeMat);
+    group.add(cube);
+    group.add(edges);
+    group.scale.set(width, height, depth);
+    group.position.copy(position);
+    group.rotation.y = rotation * Math.PI / 180;
+    scene.add(group);
+    var obj = {type:'block', group:group, mesh:cube, mat:mat, edgeMat:edgeMat, width:width, height:height, depth:depth, opacity:opacity, rotX:0, rotY:rotation, rotZ:0, collide:true};
+    objects.push(obj);
+    createObjectBody(obj);
+    return obj;
+  }
+
+  function makeWall(width, height, opacity, rotX, rotY, rotZ, position){
+    var group = new THREE.Group();
+    var tex = wallBaseTex.clone();
+    tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+    tex.repeat.set(Math.max(1, width / 1.2), Math.max(1, height / 1.2));
+    tex.needsUpdate = true;
+    var mat = new THREE.MeshBasicMaterial({map:tex, transparent:true, opacity:opacity, side:THREE.DoubleSide, depthWrite:false});
+    var plane = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), mat);
+    group.add(plane);
+    group.scale.set(width, height, 1);
+    group.position.copy(position);
+    group.rotation.set(rotX * Math.PI / 180, rotY * Math.PI / 180, rotZ * Math.PI / 180);
+    scene.add(group);
+    var obj = {type:'wall', group:group, plane:plane, wallMat:mat, wallTex:tex, width:width, height:height, depth:0, opacity:opacity, rotX:rotX, rotY:rotY, rotZ:rotZ, collide:false};
+    objects.push(obj);
+    return obj;
+  }
+
+  function updateGizmoButtons(){
+    for(var i = 0; i < gizmoButtons.length; i++){
+      var b = gizmoButtons[i];
+      b.classList.toggle('is-active', b.getAttribute('data-gizmo') === gizmoMode);
+      b.disabled = !!(selected && selected.type === 'base' && b.getAttribute('data-gizmo') === 'rotate');
+    }
+  }
+
+  function attachGizmo(obj){
+    if(!transformControls || !obj) return;
+    transformControls.attach(obj.group);
+    transformControls.enabled = true;
+    var mode = (obj.type === 'base' && gizmoMode === 'rotate') ? 'translate' : gizmoMode;
+    transformControls.setMode(mode);
+    updateGizmoButtons();
+  }
+
+  function detachGizmo(){
+    if(!transformControls) return;
+    transformControls.detach();
+    transformControls.enabled = false;
+  }
+
+  function setGizmoMode(mode){
+    gizmoMode = mode;
+    if(selected && selected.type === 'base' && gizmoMode === 'rotate') gizmoMode = 'translate';
+    if(transformControls && selected){
+      transformControls.setMode(gizmoMode);
+    }
+    updateGizmoButtons();
+  }
+
+  function onGizmoChange(){
+    if(!selected) return;
+    var o = selected;
+    var px = o.group.position.x;
+    var py = o.group.position.y;
+    var pz = o.group.position.z;
+    if(o.type === 'base'){
+      BASE.x = px;
+      BASE.z = pz;
+      BASE.width = Math.max(0.4, Math.abs(o.group.scale.x));
+      BASE.thickness = Math.max(0.05, Math.abs(o.group.scale.y));
+      BASE.depth = Math.max(0.4, Math.abs(o.group.scale.z));
+      BASE.top = py + BASE.thickness / 2;
+      baseObj.width = BASE.width;
+      baseObj.depth = BASE.depth;
+      baseObj.thickness = BASE.thickness;
+      baseObj.top = BASE.top;
+      baseObj.x = BASE.x;
+      baseObj.z = BASE.z;
+      updateBaseVisual();
+      updateBaseBody();
+      if(editW) editW.value = Number(BASE.width.toFixed(2));
+      if(editH) editH.value = Number(BASE.depth.toFixed(2));
+      if(editD) editD.value = Number(BASE.thickness.toFixed(2));
+      if(editX) editX.value = Number(BASE.x.toFixed(2));
+      if(editY) editY.value = Number(BASE.top.toFixed(2));
+      if(editZ) editZ.value = Number(BASE.z.toFixed(2));
+      selectionHelper.setFromObject(baseBox);
+      return;
+    }
+    var w = Math.max(0.2, Math.abs(o.group.scale.x));
+    var h = Math.max(0.2, Math.abs(o.group.scale.y));
+    var d = Math.max(0.05, Math.abs(o.group.scale.z));
+    o.width = w;
+    o.height = h;
+    o.rotX = o.group.rotation.x * 180 / Math.PI;
+    o.rotY = o.group.rotation.y * 180 / Math.PI;
+    o.rotZ = o.group.rotation.z * 180 / Math.PI;
+    if(o.type === 'photo'){
+      o.group.scale.z = 1;
+      o.depth = 0;
+    }else if(o.type === 'wall'){
+      o.group.scale.z = 1;
+      o.depth = 0;
+      o.wallTex.repeat.set(Math.max(1, w / 1.2), Math.max(1, h / 1.2));
+      o.wallTex.needsUpdate = true;
+    }else if(o.type === 'block'){
+      o.depth = d;
+    }
+    if(o.body) syncObjectBody(o);
+    if(editX) editX.value = Number(px.toFixed(2));
+    if(editY) editY.value = Number(py.toFixed(2));
+    if(editZ) editZ.value = Number(pz.toFixed(2));
+    if(editW) editW.value = Number(w.toFixed(2));
+    if(editH) editH.value = Number(h.toFixed(2));
+    if(editD) editD.value = Number((o.type === 'block' ? o.depth : 0.05).toFixed(2));
+    if(editRX) editRX.value = Math.round(o.rotX);
+    if(editRY) editRY.value = Math.round(o.rotY);
+    if(editRZ) editRZ.value = Math.round(o.rotZ);
+    if(o.type !== 'wall' && o.type !== 'base'){
+      selectionHelper.setFromObject(o.group);
+    }
+  }
+
+  function loadTransform(i){
+    if(i >= TRANSFORM_URLS.length){
+      toast('기즈모를 불러오지 못했습니다.', 'gola-toast--red', true);
+      return;
+    }
+    import(TRANSFORM_URLS[i]).then(function(mod){
+      if(!mod || !mod.TransformControls) throw new Error('no TransformControls');
+      transformControls = new mod.TransformControls(camera, renderer.domElement);
+      transformControls.setSize(1.15);
+      transformControls.setSpace('world');
+      transformControls.enabled = false;
+      scene.add(transformControls);
+      transformControls.addEventListener('dragging-changed', function(e){
+        if(e.value) pushHistory();
+        canvas.style.cursor = e.value ? 'grabbing' : (shanshenbuMode ? 'not-allowed' : 'grab');
+      });
+      transformControls.addEventListener('objectChange', onGizmoChange);
+      if(selected) attachGizmo(selected);
+    }).catch(function(){
+      loadTransform(i + 1);
+    });
+  }
+
+  function selectObject(obj){
+    if(!obj) return;
+    selected = obj;
+    if(obj.type !== 'wall' && obj.type !== 'base'){
+      selectionHelper.setFromObject(obj.group);
+      selectionHelper.visible = true;
+    }else{
+      selectionHelper.visible = false;
+    }
+    if(editorEl){ editorEl.classList.add('open'); editorEl.classList.remove('is-empty'); }
+    var isBase = obj.type === 'base';
+    var isWall = obj.type === 'wall';
+    var isPhoto = obj.type === 'photo';
+    var isBlock = obj.type === 'block';
+    [editW, editH, editX, editY, editZ, editRX, editRY, editRZ, editO].forEach(function(el){ if(el) el.disabled = false; });
+    if(editorTitle) editorTitle.textContent = isBase ? '베이스 플레이트' : (isPhoto ? '사진' : (isWall ? '투명 벽' : '투명 블럭'));
+    if(editorSub) editorSub.textContent = isBase ? '가로 · 세로 · 두께' : (isPhoto || isWall ? '가로 · 세로' : '가로 · 세로 · 깊이');
+    if(editD) editD.disabled = isPhoto || isWall;
+    if(editRX) editRX.disabled = isBase;
+    if(editRY) editRY.disabled = isBase;
+    if(editRZ) editRZ.disabled = isBase;
+    if(editO) editO.disabled = isBase;
+    if(objDupBtn) objDupBtn.disabled = isBase;
+    if(objDelBtn) objDelBtn.disabled = isBase;
+    if(editCollide){
+      editCollide.disabled = isBase || isWall;
+      editCollide.checked = (isPhoto || isBlock) ? obj.collide !== false : false;
+      if(typeof syncToggle === 'function') syncToggle('editCollide');
+    }
+    if(editW) editW.value = Number(obj.width.toFixed(2));
+    if(editH) editH.value = Number((isBase ? obj.depth : obj.height).toFixed(2));
+    if(editD) editD.value = Number((isBase ? obj.thickness : (isBlock ? obj.depth : 0.05)).toFixed(2));
+    if(editX) editX.value = Number(obj.group.position.x.toFixed(2));
+    if(editY) editY.value = Number((isBase ? BASE.top : obj.group.position.y).toFixed(2));
+    if(editZ) editZ.value = Number(obj.group.position.z.toFixed(2));
+    if(editRX) editRX.value = Math.round(obj.rotX || 0);
+    if(editRY) editRY.value = Math.round(obj.rotY || 0);
+    if(editRZ) editRZ.value = Math.round(obj.rotZ || 0);
+    if(editO) editO.value = Math.round((obj.opacity != null ? obj.opacity : 1) * 100);
+    if(objApplyBtn) objApplyBtn.disabled = false;
+    attachGizmo(obj);
+  }
+
+  function showEditorEmpty(){
+    if(editorEl){ editorEl.classList.add('open'); editorEl.classList.add('is-empty'); }
+    if(editorTitle) editorTitle.textContent = '오브젝트 없음';
+    if(editorSub) editorSub.textContent = 'Ctrl+Z / Ctrl+Y';
+    [editW, editH, editD, editX, editY, editZ, editRX, editRY, editRZ, editO].forEach(function(el){
+      if(el){ el.disabled = true; el.value = ''; }
+    });
+    if(editCollide) editCollide.disabled = true;
+    if(objApplyBtn) objApplyBtn.disabled = true;
+    if(objDupBtn) objDupBtn.disabled = true;
+    if(objDelBtn) objDelBtn.disabled = true;
+    for(var i = 0; i < gizmoButtons.length; i++) gizmoButtons[i].disabled = true;
+    detachGizmo();
+    selectionHelper.visible = false;
+    updateHistoryButtons();
+  }
+
+  function deselectObject(){
+    selected = null;
+    detachGizmo();
+    selectionHelper.visible = false;
+    if(editorEl) editorEl.classList.remove('open');
+    updateGizmoButtons();
+  }
+
+  function applyEditor(){
+    if(!selected) return;
+    pushHistory();
+    var w = Math.max(0.2, Number(editW.value) || 0.2);
+    var h = Math.max(0.2, Number(editH.value) || 0.2);
+    var d = Math.max(0.05, Number(editD.value) || 0.05);
+    var x = Number(editX.value) || 0;
+    var y = Number(editY.value) || 0;
+    var z = Number(editZ.value) || 0;
+    var rx = Number(editRX.value) || 0;
+    var ry = Number(editRY.value) || 0;
+    var rz = Number(editRZ.value) || 0;
+    var o = Math.max(0, Math.min(1, (Number(editO.value) || 0) / 100));
+    if(selected.type === 'base'){
+      BASE.width = Math.max(0.4, w);
+      BASE.depth = Math.max(0.4, h);
+      BASE.thickness = Math.max(0.05, d);
+      BASE.x = x;
+      BASE.z = z;
+      BASE.top = y;
+      baseObj.width = BASE.width;
+      baseObj.depth = BASE.depth;
+      baseObj.thickness = BASE.thickness;
+      baseObj.top = BASE.top;
+      baseObj.x = BASE.x;
+      baseObj.z = BASE.z;
+      updateBaseVisual();
+      updateBaseBody();
+      selectionHelper.setFromObject(baseBox);
+      return;
+    }
+    selected.width = w;
+    selected.height = h;
+    selected.rotX = rx;
+    selected.rotY = ry;
+    selected.rotZ = rz;
+    selected.opacity = o;
+    if(selected.type === 'photo'){
+      selected.group.scale.set(w, h, 1);
+      selected.imageMat.opacity = o;
+      selected.backMat.opacity = o;
+      selected.frameMat.opacity = o;
+    }else if(selected.type === 'block'){
+      selected.depth = d;
+      selected.group.scale.set(w, h, d);
+      selected.mat.opacity = o;
+      selected.edgeMat.opacity = Math.max(0.45, o);
+    }else if(selected.type === 'wall'){
+      selected.group.scale.set(w, h, 1);
+      selected.wallMat.opacity = o;
+      selected.wallTex.repeat.set(Math.max(1, w / 1.2), Math.max(1, h / 1.2));
+      selected.wallTex.needsUpdate = true;
+    }
+    selected.group.position.set(x, y, z);
+    selected.group.rotation.set(rx * Math.PI / 180, ry * Math.PI / 180, rz * Math.PI / 180);
+    if(selected.body) syncObjectBody(selected);
+    if(selected.type !== 'wall' && selected.type !== 'base'){
+      selectionHelper.setFromObject(selected.group);
+    }
+  }
+
+  function deleteSelected(){
+    if(!selected || selected.type === 'base') return;
+    pushHistory();
+    var obj = selected;
+    if(obj.body){
+      world.removeBody(obj.body);
+      obj.body = null;
+    }
+    scene.remove(obj.group);
+    obj.group.traverse(function(n){
+      if(n.geometry) n.geometry.dispose();
+      if(n.material && n.material.dispose) n.material.dispose();
+    });
+    objects = objects.filter(function(o){ return o !== obj; });
+    selected = null;
+    showEditorEmpty();
+  }
+
+  function duplicateSelected(){
+    if(!selected || selected.type === 'base') return;
+    pushHistory();
+    var p = selected.group.position.clone();
+    p.x += 0.6;
+    var obj;
+    if(selected.type === 'photo'){
+      obj = makePhoto(selected.texture, selected.name, selected.width, selected.height, selected.opacity, selected.rotY, p);
+    }else if(selected.type === 'block'){
+      obj = makeBlock(selected.width, selected.height, selected.depth, selected.opacity, selected.rotY, p);
+    }else{
+      obj = makeWall(selected.width, selected.height, selected.opacity, selected.rotX, selected.rotY, selected.rotZ, p);
+    }
+    selectObject(obj);
+  }
+
+  var undoStack = [];
+  var redoStack = [];
+  var historyLimit = 40;
+
+  function snapshotScene(){
+    var sel = null;
+    if(selected){
+      if(selected.type === 'base') sel = {type:'base'};
+      else{
+        var idx = objects.indexOf(selected);
+        if(idx >= 0) sel = {type:selected.type, index:idx};
+      }
+    }
+    return {
+      base:{width:BASE.width, depth:BASE.depth, thickness:BASE.thickness, x:BASE.x, z:BASE.z, top:BASE.top},
+      objects:objects.map(function(o){
+        var d = {
+          type:o.type, width:o.width, height:o.height, depth:o.depth, opacity:o.opacity,
+          rotX:o.rotX || 0, rotY:o.rotY || 0, rotZ:o.rotZ || 0,
+          x:o.group.position.x, y:o.group.position.y, z:o.group.position.z,
+          collide:o.collide !== false
+        };
+        if(o.type === 'photo'){ d.texture = o.texture; d.name = o.name; }
+        return d;
+      }),
+      sel:sel
+    };
+  }
+
+  function clearObjectsForHistory(){
+    deselectObject();
+    draggingObject = null;
+    for(var i = 0; i < objects.length; i++){
+      var o = objects[i];
+      if(o.body){ world.removeBody(o.body); o.body = null; }
+      scene.remove(o.group);
+      o.group.traverse(function(n){
+        if(n.geometry) n.geometry.dispose();
+        if(n.material && n.material.dispose) n.material.dispose();
+      });
+      if(o.wallTex) o.wallTex.dispose();
+    }
+    objects = [];
+  }
+
+  function restoreSnapshot(snap){
+    clearObjectsForHistory();
+    BASE.width = snap.base.width;
+    BASE.depth = snap.base.depth;
+    BASE.thickness = snap.base.thickness;
+    BASE.x = snap.base.x;
+    BASE.z = snap.base.z;
+    BASE.top = snap.base.top;
+    baseObj.width = BASE.width;
+    baseObj.depth = BASE.depth;
+    baseObj.thickness = BASE.thickness;
+    baseObj.x = BASE.x;
+    baseObj.z = BASE.z;
+    baseObj.top = BASE.top;
+    updateBaseVisual();
+    updateBaseBody();
+    for(var i = 0; i < snap.objects.length; i++){
+      var s = snap.objects[i];
+      var p = new THREE.Vector3(s.x, s.y, s.z);
+      var o;
+      if(s.type === 'photo'){
+        o = makePhoto(s.texture, s.name, s.width, s.height, s.opacity, s.rotY, p);
+        o.rotX = s.rotX;
+        o.rotZ = s.rotZ;
+        o.group.rotation.set(s.rotX * Math.PI / 180, s.rotY * Math.PI / 180, s.rotZ * Math.PI / 180);
+        o.collide = s.collide;
+      }else if(s.type === 'block'){
+        o = makeBlock(s.width, s.height, s.depth, s.opacity, s.rotY, p);
+        o.rotX = s.rotX;
+        o.rotZ = s.rotZ;
+        o.depth = s.depth;
+        o.group.scale.set(s.width, s.height, s.depth);
+        o.group.rotation.set(s.rotX * Math.PI / 180, s.rotY * Math.PI / 180, s.rotZ * Math.PI / 180);
+        o.collide = s.collide;
+      }else{
+        o = makeWall(s.width, s.height, s.opacity, s.rotX, s.rotY, s.rotZ, p);
+      }
+      if(o.body) syncObjectBody(o);
+      if(!s.collide && o.body){
+        world.removeBody(o.body);
+        o.body = null;
+        o.collide = false;
+      }else if(s.collide && !o.body && (o.type === 'photo' || o.type === 'block')){
+        createObjectBody(o);
+      }
+    }
+    if(snap.sel){
+      if(snap.sel.type === 'base') selectObject(baseObj);
+      else if(objects[snap.sel.index]) selectObject(objects[snap.sel.index]);
+    }else{
+      showEditorEmpty();
+    }
+    updateHistoryButtons();
+  }
+
+  function updateHistoryButtons(){
+    if(undoBtn) undoBtn.disabled = undoStack.length === 0;
+    if(redoBtn) redoBtn.disabled = redoStack.length === 0;
+  }
+
+  function pushHistory(){
+    undoStack.push(snapshotScene());
+    if(undoStack.length > historyLimit) undoStack.shift();
+    redoStack = [];
+    updateHistoryButtons();
+  }
+
+  function undoScene(){
+    if(!undoStack.length) return;
+    redoStack.push(snapshotScene());
+    restoreSnapshot(undoStack.pop());
+  }
+
+  function redoScene(){
+    if(!redoStack.length) return;
+    undoStack.push(snapshotScene());
+    restoreSnapshot(redoStack.pop());
+  }
+
+  function addPhotoFile(file){
+    if(!file || !file.type || file.type.indexOf('image/') !== 0) return;
+    var reader = new FileReader();
+    reader.onload = function(ev){
+      var img = new Image();
+      img.onload = function(){
+        var tex = new THREE.Texture(img);
+        tex.colorSpace = THREE.SRGBColorSpace;
+        tex.minFilter = THREE.LinearFilter;
+        tex.magFilter = THREE.LinearFilter;
+        tex.generateMipmaps = false;
+        tex.anisotropy = renderer.capabilities.getMaxAnisotropy();
+        tex.needsUpdate = true;
+        var w = window.innerWidth < 760 ? 1.1 : 1.6;
+        var h = w * img.height / img.width;
+        if(h > 2.4){ h = 2.4; w = h * img.width / img.height; }
+        var pos = spawnPos();
+        pushHistory();
+        var obj = makePhoto(tex, file.name, w, h, 1, faceCameraYaw(pos), pos);
+        selectObject(obj);
+        clearToasts();
+        toast('사진 : ' + file.name, 'gola-toast--gold', true);
+      };
+      img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  if(optEditMode){
+    optEditMode.addEventListener('change', function(){
+      editMode = this.checked;
+      if(editMode){
+        dragging = false;
+        dragPart = null;
+        if(shanshenbuMode){
+          shanshenbuMode = false;
+          var os = byId('optShanshen');
+          if(os) os.checked = false;
+          if(typeof syncToggle === 'function') syncToggle('optShanshen');
+          if(shanAudio){ try{ shanAudio.pause(); }catch(e){} }
+        }
+      }
+    });
+  }
+  if(optWallFirst){
+    optWallFirst.addEventListener('change', function(){
+      wallPriority = this.checked;
+    });
+  }
+  if(editCollide){
+    editCollide.addEventListener('change', function(){
+      if(!selected || (selected.type !== 'photo' && selected.type !== 'block')) return;
+      pushHistory();
+      if(this.checked){
+        if(!selected.body) createObjectBody(selected);
+      }else if(selected.body){
+        world.removeBody(selected.body);
+        selected.body = null;
+        selected.collide = false;
+      }
+    });
+  }
+  if(objApplyBtn) objApplyBtn.addEventListener('click', applyEditor);
+  if(undoBtn) undoBtn.addEventListener('click', undoScene);
+  if(redoBtn) redoBtn.addEventListener('click', redoScene);
+  if(editorClose) editorClose.addEventListener('click', deselectObject);
+  if(objDelBtn) objDelBtn.addEventListener('click', deleteSelected);
+  if(objDupBtn) objDupBtn.addEventListener('click', duplicateSelected);
+  if(addPhotoBtn){
+    addPhotoBtn.addEventListener('click', function(){
+      closeMenu();
+      if(photoInput){ photoInput.value = ''; photoInput.click(); }
+    });
+  }
+  if(photoInput){
+    photoInput.addEventListener('change', function(){
+      addPhotoFile(this.files && this.files[0]);
+    });
+  }
+  if(addBlockBtn){
+    addBlockBtn.addEventListener('click', function(){
+      closeMenu();
+      var pos = spawnPos();
+      pushHistory();
+      var obj = makeBlock(1.2, 1.2, 1.2, 0.18, 0, pos);
+      selectObject(obj);
+      clearToasts();
+      toast('투명 블럭', 'gola-toast--gold', true);
+    });
+  }
+  if(addWallBtn){
+    addWallBtn.addEventListener('click', function(){
+      closeMenu();
+      var pos = spawnPos();
+      pushHistory();
+      var obj = makeWall(4.0, 3.0, 0.35, 0, faceCameraYaw(pos), 0, pos);
+      selectObject(obj);
+      clearToasts();
+      toast('투명 벽', 'gola-toast--gold', true);
+    });
+  }
+  if(editBaseBtn){
+    editBaseBtn.addEventListener('click', function(){
+      closeMenu();
+      selectObject(baseObj);
+      clearToasts();
+      toast('베이스 플레이트', 'gola-toast--gold', true);
+    });
+  }
+  for(var gb = 0; gb < gizmoButtons.length; gb++){
+    (function(btn){
+      btn.addEventListener('click', function(){ setGizmoMode(btn.getAttribute('data-gizmo')); });
+    })(gizmoButtons[gb]);
+  }
+  updateGizmoButtons();
+  loadTransform(0);
+
+  var recorderEl = byId('recorder');
+  var recTimeEl = byId('recTime');
+  var recStopBtn = byId('recStop');
+  var recGifBtn = byId('recGif');
+  var recMp4Btn = byId('recMp4');
+  var recFormat = null;
+  var recTimer = null;
+  var recStart = 0;
+  var recGif = null;
+  var recGifMod = null;
+  var recCap = null;
+  var recCtx = null;
+  var recRecorder = null;
+  var recChunks = [];
+
+  function downloadBlob(blob, name){
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function(){
+      URL.revokeObjectURL(a.href);
+      if(a.parentNode) a.parentNode.removeChild(a);
+    }, 1000);
+  }
+
+  function stopRecording(){
+    if(!recFormat) return;
+    var fmt = recFormat;
+    recFormat = null;
+    if(recTimer){ clearInterval(recTimer); recTimer = null; }
+    if(recorderEl) recorderEl.classList.remove('open');
+    if(fmt === 'gif' && recGif){
+      var gifBlob = new Blob([recGif.bytes()], {type:'image/gif'});
+      downloadBlob(gifBlob, 'appie-' + Date.now() + '.gif');
+      recGif = null;
+      recGifMod = null;
+      recCap = null;
+      recCtx = null;
+      toast('GIF 저장 완료', 'gola-toast--gold', true);
+    }else if(fmt === 'mp4' && recRecorder && recRecorder.state !== 'inactive'){
+      recRecorder.stop();
+    }
+  }
+
+  function captureGifFrame(){
+    if(!recGif || !recCap || !recCtx || !recGifMod) return;
+    renderer.render(scene, camera);
+    recCtx.drawImage(renderer.domElement, 0, 0, recCap.width, recCap.height);
+    var data = recCtx.getImageData(0, 0, recCap.width, recCap.height).data;
+    var palette = recGifMod.quantize(data, 256, {format:'rgb444'});
+    var index = recGifMod.applyPalette(data, palette, 'rgb444');
+    recGif.writeFrame(index, recCap.width, recCap.height, {palette:palette, delay:100});
+  }
+
+  function recTick(){
+    if(!recFormat) return;
+    var sec = (performance.now() - recStart) / 1000;
+    if(recTimeEl) recTimeEl.textContent = sec.toFixed(1) + 's';
+    if(recFormat === 'gif') captureGifFrame();
+    if(sec >= 15) stopRecording();
+  }
+
+  function startRecording(format){
+    if(recFormat) return;
+    closeMenu();
+    recStart = performance.now();
+    recFormat = format;
+    if(recorderEl) recorderEl.classList.add('open');
+    if(recTimeEl) recTimeEl.textContent = '0.0s';
+    if(format === 'gif'){
+      import('https://cdn.jsdelivr.net/npm/gifenc@1.0.3/dist/gifenc.esm.js').then(function(mod){
+        if(recFormat !== 'gif') return;
+        recGifMod = mod;
+        recGif = mod.GIFEncoder();
+        recCap = document.createElement('canvas');
+        recCap.width = 480;
+        recCap.height = Math.max(2, Math.round(480 * window.innerHeight / window.innerWidth));
+        recCtx = recCap.getContext('2d', {willReadFrequently:true});
+        captureGifFrame();
+        recTimer = setInterval(recTick, 100);
+      }).catch(function(){
+        recFormat = null;
+        if(recorderEl) recorderEl.classList.remove('open');
+        toast('GIF 인코더를 불러오지 못했습니다.', 'gola-toast--red', true);
+      });
+    }else if(format === 'mp4'){
+      if(!window.MediaRecorder || !MediaRecorder.isTypeSupported('video/mp4')){
+        recFormat = null;
+        if(recorderEl) recorderEl.classList.remove('open');
+        toast('MP4 녹화를 지원하지 않는 브라우저입니다.', 'gola-toast--red', true);
+        return;
+      }
+      try{
+        var stream = canvas.captureStream(30);
+        recRecorder = new MediaRecorder(stream, {mimeType:'video/mp4', videoBitsPerSecond:6000000});
+        recChunks = [];
+        recRecorder.ondataavailable = function(e){ if(e.data && e.data.size) recChunks.push(e.data); };
+        recRecorder.onstop = function(){
+          var blob = new Blob(recChunks, {type:'video/mp4'});
+          downloadBlob(blob, 'appie-' + Date.now() + '.mp4');
+          recRecorder = null;
+          recChunks = [];
+          toast('MP4 저장 완료', 'gola-toast--gold', true);
+        };
+        recRecorder.start(500);
+        recTimer = setInterval(recTick, 100);
+      }catch(e){
+        recFormat = null;
+        if(recorderEl) recorderEl.classList.remove('open');
+        toast('MP4 녹화를 시작하지 못했습니다.', 'gola-toast--red', true);
+      }
+    }
+  }
+
+  if(recGifBtn) recGifBtn.addEventListener('click', function(){ startRecording('gif'); });
+  if(recMp4Btn) recMp4Btn.addEventListener('click', function(){ startRecording('mp4'); });
+  if(recStopBtn) recStopBtn.addEventListener('click', stopRecording);
+
+  window.AppieDebug = {fling:fling, reset:function(){ spawnAppie(); }, spin:spin, settings:settings, camera:camera, parts:function(){ return parts; }, appies:function(){ return appies; }, active:function(){ return activeAppie; }, spawn:spawnAppie, keys:keys, objects:function(){ return objects; }, selected:function(){ return selected; }, base:function(){ return baseObj; }, selectObject:selectObject, isShan:function(){ return shanshenbuMode; }, isDragging:function(){ return dragging; }, isLooking:function(){ return looking; }, isEdit:function(){ return editMode; }, isWallFirst:function(){ return wallPriority; }, gizmo:function(){ return transformControls; }, gizmoMode:function(){ return gizmoMode; }, camYaw:function(){ return camYaw; }, camPitch:function(){ return camPitch; }, applySkin:applySkinByName, resetSkin:resetSkin, currentSkin:function(){ return currentSkinName; }};
+  window.AppieDebug.screenPoint = function(x,y,z){ var v=new THREE.Vector3(x,y,z); v.project(camera); return {x:(v.x*0.5+0.5)*window.innerWidth, y:(-v.y*0.5+0.5)*window.innerHeight}; };
+}
+
+loadThree(0);
+})();
+</script>
+</body>
+</html>
