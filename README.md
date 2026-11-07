@@ -7,7 +7,7 @@
 
 이 Ai Slop도 고급진 Wifi가 필요합니다. (three.js / cannon-es CDN 사용).
 
-- `Appie-ragdoll.html`을 브라우저로 직접 열기, 또는
+- https://muffler-2597.github.io/AppieRagdoll/ 접속, 또는
 - `python -m http.server 8000` 후 http://localhost:8000/Appie-ragdoll.html 접속
 
 ## 조작
