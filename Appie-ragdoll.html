@@ -262,7 +262,22 @@
             <button type="button" class="gola-btn gola-btn--sm gola-press" id="recGif">GIF 녹화</button>
             <button type="button" class="gola-btn gola-btn--sm gola-press" id="recMp4">MP4 녹화</button>
           </div>
-          <p class="menu-copy">캔버스만 저장합니다. 최대 3분.</p>
+          <div class="toggle-row">
+            <input type="checkbox" class="gola-check" id="optGreen">
+            <label class="gola-switch" for="optGreen"><span class="gola-knob"></span></label>
+            <label class="gola-label" for="optGreen" data-gola-text="그린 스크린 : 켜짐|그린 스크린 : 꺼짐" data-gola-for="optGreen">그린 스크린 : 꺼짐</label>
+          </div>
+          <div class="toggle-row">
+            <input type="checkbox" class="gola-check" id="optGreenPhoto" data-gola-sub="optGreen">
+            <label class="gola-switch" for="optGreenPhoto"><span class="gola-knob"></span></label>
+            <label class="gola-label" for="optGreenPhoto" data-gola-text="사진 표시 : 켜짐|사진 표시 : 꺼짐" data-gola-for="optGreenPhoto">사진 표시 : 꺼짐</label>
+          </div>
+          <div class="toggle-row">
+            <input type="checkbox" class="gola-check" id="optGreenBase" data-gola-sub="optGreen">
+            <label class="gola-switch" for="optGreenBase"><span class="gola-knob"></span></label>
+            <label class="gola-label" for="optGreenBase" data-gola-text="베이스 표시 : 켜짐|베이스 표시 : 꺼짐" data-gola-for="optGreenBase">베이스 표시 : 꺼짐</label>
+          </div>
+          <p class="menu-copy">캔버스만 저장합니다. 최대 3분. 그린 스크린 켜고 녹화하면 합성용으로 빠집니다.</p>
         </section>
       </div>
       <div class="menu-hint">[R] 스폰 / [M] 효과음 / [Ctrl+Z·Y] 되돌리기</div>
@@ -421,7 +436,7 @@ function main(THREE, CANNON){
   };
 
   var STORE_KEY = 'appieragdoll.settings.v1';
-  var DEFAULTS = {power:100, shadows:true, sound:true, shake:true, toast:true, seenTutorial:false, skin:'Appie_1019', skinURL:'', skinModel:'classic', stereo:true};
+  var DEFAULTS = {power:100, shadows:true, sound:true, shake:true, toast:true, seenTutorial:false, skin:'Appie_1019', skinURL:'', skinModel:'classic', stereo:true, green:false, greenPhoto:false, greenBase:false};
   var settings = Object.assign({}, DEFAULTS, (function(){
     try{
       var raw = localStorage.getItem(STORE_KEY);
@@ -435,6 +450,9 @@ function main(THREE, CANNON){
   if(typeof settings.skinURL !== 'string') settings.skinURL = '';
   if(settings.skinModel !== 'slim' && settings.skinModel !== 'classic') settings.skinModel = 'classic';
   settings.stereo = settings.stereo !== false;
+  settings.green = !!settings.green;
+  settings.greenPhoto = !!settings.greenPhoto;
+  settings.greenBase = !!settings.greenBase;
   delete settings.cam;
 
   function saveSettings(){
@@ -458,7 +476,9 @@ function main(THREE, CANNON){
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
   var scene = new THREE.Scene();
-  scene.background = new THREE.Color(0xffffff);
+  var bgColor = new THREE.Color(0xffffff);
+  var greenColor = new THREE.Color(0x00ff00);
+  scene.background = bgColor;
 
   var camera = new THREE.PerspectiveCamera(46, 1, 0.2, 800);
   var camYaw = 0;
@@ -1558,7 +1578,7 @@ function main(THREE, CANNON){
     downY = e.clientY;
     movedFar = false;
     var appieHits = ray.intersectObjects(allPartGroups(), true);
-    var targets = objects.map(function(o){ return o.group; });
+    var targets = objects.filter(function(o){ return o.group.visible !== false; }).map(function(o){ return o.group; });
     var hit = ray.intersectObjects(targets, true);
     if(appieHits.length && (!hit.length || appieHits[0].distance <= hit[0].distance)){
       var appiePart = findPart(appieHits[0].object);
@@ -1583,7 +1603,7 @@ function main(THREE, CANNON){
         return;
       }
     }
-    if(transformControls && transformControls.enabled && ray.intersectObject(transformControls, true).length > 0) return;
+    if(transformControls && transformControls.enabled && transformControls.visible !== false && ray.intersectObject(transformControls, true).length > 0) return;
     if(hit.length){
       var obj = findObject(hit[0].object);
       if(obj){
@@ -1971,10 +1991,23 @@ function main(THREE, CANNON){
   sleepAll();
 
   function applyShadow(){
-    var on = !!settings.shadows;
+    var on = !!settings.shadows && !settings.green;
     renderer.shadowMap.enabled = on;
     sun.castShadow = on;
     if(on) renderer.shadowMap.needsUpdate = true;
+  }
+  function applyGreen(){
+    var g = !!settings.green;
+    scene.background = g ? greenColor : bgColor;
+    var showBase = !g || !!settings.greenBase;
+    var showPhoto = !g || !!settings.greenPhoto;
+    baseBox.visible = showBase;
+    baseGrid.visible = showBase;
+    for(var i = 0; i < baseBorders.length; i++) baseBorders[i].visible = showBase;
+    for(var j = 0; j < objects.length; j++) objects[j].group.visible = showPhoto;
+    selectionHelper.visible = !g && !!selected;
+    if(transformControls) transformControls.visible = !g;
+    applyShadow();
   }
   function syncToggle(id){
     var cb = byId(id);
@@ -1999,7 +2032,15 @@ function main(THREE, CANNON){
   bootToggle('optShadow', 'shadows');
   bootToggle('optSound', 'sound');
   bootToggle('optToast', 'toast');
+  bootToggle('optGreen', 'green');
+  bootToggle('optGreenPhoto', 'greenPhoto');
+  bootToggle('optGreenBase', 'greenBase');
   applyShadow();
+  var optGreenEl = byId('optGreen');
+  if(optGreenEl && optGreenEl.checked){
+    var greenSubs = document.querySelectorAll('[data-gola-sub="optGreen"]');
+    for(var gsi = 0; gsi < greenSubs.length; gsi++) greenSubs[gsi].disabled = false;
+  }
   var optSoundEl = byId('optSound');
   var optStereoEl = byId('optStereo');
   if(optStereoEl){
@@ -2037,6 +2078,12 @@ function main(THREE, CANNON){
   byId('optShake').addEventListener('change', function(){
     if(!menuVisible()) toast('화면 흔들림 : ' + (this.checked ? '켜짐' : '꺼짐'), 'gola-toast--gold');
   });
+  byId('optGreen').addEventListener('change', function(){
+    applyGreen();
+    if(!menuVisible()) toast('그린 스크린 : ' + (this.checked ? '켜짐' : '꺼짐'), 'gola-toast--gold');
+  });
+  byId('optGreenPhoto').addEventListener('change', function(){ applyGreen(); });
+  byId('optGreenBase').addEventListener('change', function(){ applyGreen(); });
 
   var followToggle = byId('optFollow');
   if(followToggle){
@@ -2366,6 +2413,7 @@ function main(THREE, CANNON){
     group.scale.set(width, height, 1);
     group.position.copy(position);
     group.rotation.y = rotation * Math.PI / 180;
+    group.visible = !settings.green || !!settings.greenPhoto;
     scene.add(group);
     var obj = {type:'photo', group:group, plane:plane, imageMat:imageMat, backMat:backMat, frameMat:frameMat, texture:texture, name:name, width:width, height:height, depth:0, opacity:opacity, rotX:0, rotY:rotation, rotZ:0, collide:true};
     objects.push(obj);
@@ -2457,7 +2505,7 @@ function main(THREE, CANNON){
     if(!obj) return;
     selected = obj;
     selectionHelper.setFromObject(obj.group);
-    selectionHelper.visible = true;
+    selectionHelper.visible = !settings.green;
     if(editorEl){ editorEl.classList.add('open'); editorEl.classList.remove('is-empty'); }
     [editW, editH, editX, editY, editZ, editRX, editRY, editRZ, editO].forEach(function(el){ if(el) el.disabled = false; });
     if(editorTitle) editorTitle.textContent = '사진';
@@ -2720,6 +2768,7 @@ function main(THREE, CANNON){
   }
   updateGizmoButtons();
   loadTransform(0);
+  applyGreen();
 
   var recorderEl = byId('recorder');
   var recTimeEl = byId('recTime');
