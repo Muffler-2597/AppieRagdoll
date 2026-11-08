@@ -34,5 +34,5 @@
 
 ## 스택
 
-- [GolaCSS](https://github.com/Muffler-2597/GolaCSS) (`gola/`, 오프라인 동봉) <-- 가장 중요함ㅇㅇ 
+- [GolaCSS](https://github.com/Muffler-2597/GolaCSS) (온라인 CDN, 업데이트 연동) <-- 가장 중요함ㅇㅇ 
 
