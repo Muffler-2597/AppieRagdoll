@@ -506,7 +506,7 @@ function main(THREE, CANNON){
   var CAM_SPEED = 5.0;
   var CAM_LIMIT = 140;
   var CAM_MIN_Y = 0.4;
-  var CAM_MAX_Y = 20;
+  var CAM_MAX_Y = 70;
   var keys = {w:false, a:false, s:false, d:false, shift:false};
   var followCam = false;
   var followOffset = new THREE.Vector3(4.5, 2.5, 5.75);
@@ -1045,9 +1045,12 @@ function main(THREE, CANNON){
       axisB:new CANNON.Vec3(0, 1, 0),
       angle:angle,
       twistAngle:twist,
-      maxForce:1e6,
+      maxForce:1e7,
       collideConnected:false
     });
+    for(var ei = 0; ei < c.equations.length; ei++){
+      c.equations[ei].setSpookParams(1e8, 3, 1 / 60);
+    }
     world.addConstraint(c);
     return c;
   }
@@ -1688,7 +1691,7 @@ function main(THREE, CANNON){
     var p = new THREE.Vector3();
     if(ray.ray.intersectPlane(dragPlane, p)){
       p.x = Math.max(BASE.x - BASE.width / 2, Math.min(BASE.x + BASE.width / 2, p.x));
-      p.y = Math.max(0.22, Math.min(8, p.y));
+      p.y = Math.max(0.22, Math.min(60, p.y));
       p.z = Math.max(BASE.z - BASE.depth / 2, Math.min(BASE.z + BASE.depth / 2, p.z));
       dragTarget.copy(p);
     }
