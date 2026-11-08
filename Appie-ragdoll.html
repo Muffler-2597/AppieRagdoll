@@ -49,6 +49,8 @@
   .menu-card .gola-vol-val{width:auto;font-size:clamp(20px,2.2vw,30px)}
   .toggle-row{display:flex;align-items:center;gap:14px;margin:13px 0;line-height:1}
   .toggle-row .gola-label{font-size:clamp(17px,1.8vw,26px);line-height:1.05;flex:1;min-width:0}
+  .toggle-row .wire-chip{display:inline-block;width:50px;height:50px;flex:none;background:#000}
+  .toggle-row .wire-chip img{display:block;width:100%;height:100%}
   .menu-copy{color:#FFF;font-size:clamp(13px,1.35vw,17px);line-height:1.55;opacity:.88;margin:14px 0 0}
   .menu-hint{color:#FFF;font-size:clamp(11px,1.2vw,15px);text-align:center;margin-top:26px;opacity:.68}
   #golaToasts{top:clamp(214px,24vh,244px)}
@@ -257,7 +259,8 @@
           </div>
           <div class="toggle-row">
             <input type="checkbox" class="gola-check" id="optStereo" checked data-gola-sub="optSound" data-gola-img="https://cdn.jsdelivr.net/gh/Muffler-2597/GolaCSS@master/assets/ConnectedWire.png|https://cdn.jsdelivr.net/gh/Muffler-2597/GolaCSS@master/assets/BrokenWire.png">
-            <label class="gola-imgtoggle" for="optStereo"><img src="https://cdn.jsdelivr.net/gh/Muffler-2597/GolaCSS@master/assets/ConnectedWire.png" alt="stereo on"></label>
+            <label class="gola-switch" for="optStereo"><span class="gola-knob"></span></label>
+            <span class="wire-chip"><img src="https://cdn.jsdelivr.net/gh/Muffler-2597/GolaCSS@master/assets/ConnectedWire.png" alt="stereo on"></span>
             <label class="gola-label" for="optStereo" data-gola-text="스테레오 효과음 : 켜짐|스테레오 효과음 : 꺼짐" data-gola-for="optStereo">스테레오 효과음 : 켜짐</label>
           </div>
           <div class="toggle-row">
@@ -990,6 +993,7 @@ function main(THREE, CANNON){
       m.receiveShadow = true;
       m.customDepthMaterial = depthMat;
       m.frustumCulled = false;
+      m.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 0, 0), 10000);
       m.userData.partIndex = k;
       for(var s = 0; s < cap; s++) m.setColorAt(s, tmpColor.setHex(0xffffff));
       m.instanceColor.needsUpdate = true;
